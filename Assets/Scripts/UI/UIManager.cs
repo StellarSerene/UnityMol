@@ -57,6 +57,7 @@ using System.IO;
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Diagnostics;
 
 using UnityEngine.UI.Extensions;
 using UnityEngine.UI.Extensions.ColorPicker;
@@ -269,13 +270,13 @@ public class UIManager : MonoBehaviour {
 		catch (System.Exception e) {
 			string errM = e.ToString();
 			if (errM.Contains("404")) {
-				Debug.LogError("Wrong PDB Id");
+					UnityEngine.Debug.LogError("Wrong PDB Id");
 			}
 			else if (errM.Contains("ConnectFailure")) {
-				Debug.LogError("No internet connection or blocked access to the PDB");
+					UnityEngine.Debug.LogError("No internet connection or blocked access to the PDB");
 			}
 			else {
-				Debug.LogError("Could not fetch PDB file");
+					UnityEngine.Debug.LogError("Could not fetch PDB file");
 			}
 
 			// if(internetCanvas != null){
@@ -468,7 +469,7 @@ public class UIManager : MonoBehaviour {
 			}
 		}
 		catch (System.Exception e) {
-			Debug.LogError("Failed to create selection toggle : " + e);
+				UnityEngine.Debug.LogError("Failed to create selection toggle : " + e);
 		}
 		// foreach (string ss in selectionToUIObject.Keys) {
 		// 	try {
@@ -657,16 +658,16 @@ public class UIManager : MonoBehaviour {
 				string curSelName = selM.currentSelection.name;
 				if ( sel.name == curSelName) {
 					APIPython.clearSelections();
-					Debug.Log("Selection : " + sel.name + " is now inactive");
+					UnityEngine.Debug.Log("Selection : " + sel.name + " is now inactive");
 				}
 				else {
 					APIPython.setCurrentSelection(sel.name);
-					Debug.Log("Selection : " + sel.name + " is now active");
+					UnityEngine.Debug.Log("Selection : " + sel.name + " is now active");
 				}
 			}
 			else {
 				APIPython.setCurrentSelection(sel.name);
-				Debug.Log("Selection : " + sel.name + " is now active");
+				UnityEngine.Debug.Log("Selection : " + sel.name + " is now active");
 			}
 
 
@@ -761,7 +762,7 @@ public class UIManager : MonoBehaviour {
 
 			catch (System.Exception e) {
 				mainDropdownRep.value = 0;
-				Debug.LogError(e);
+				UnityEngine.Debug.LogError(e);
 				return;
 			}
 
@@ -1945,7 +1946,7 @@ public class UIManager : MonoBehaviour {
 			APIPython.showHideSideChainsInSelection(selM.currentSelection.name);
 		}
 		else {
-			Debug.LogWarning("Empty selection");
+				UnityEngine.Debug.LogWarning("Empty selection");
 		}
 	}
 	public void showHideH() {
@@ -1953,7 +1954,7 @@ public class UIManager : MonoBehaviour {
 			APIPython.showHideHydrogensInSelection(selM.currentSelection.name);
 		}
 		else {
-			Debug.LogWarning("Empty selection");
+				UnityEngine.Debug.LogWarning("Empty selection");
 		}
 	}
 	public void showHideBB() {
@@ -1961,7 +1962,7 @@ public class UIManager : MonoBehaviour {
 			APIPython.showHideBackboneInSelection(selM.currentSelection.name);
 		}
 		else {
-			Debug.LogWarning("Empty selection");
+				UnityEngine.Debug.LogWarning("Empty selection");
 		}
 	}
 	public void changeScale(Slider s) {
@@ -1979,7 +1980,7 @@ public class UIManager : MonoBehaviour {
 			APIPython.centerOnStructure(selM.currentSelection.structures[0].uniqueName, lerp: true);
 		}
 		else {
-			Debug.LogWarning("Empty selection");
+				UnityEngine.Debug.LogWarning("Empty selection");
 		}
 	}
 	public void centerViewSelection() {
@@ -1987,13 +1988,13 @@ public class UIManager : MonoBehaviour {
 			APIPython.centerOnSelection(selM.currentSelection.name, lerp: true);
 		}
 		else {
-			Debug.LogWarning("Empty selection");
+				UnityEngine.Debug.LogWarning("Empty selection");
 		}
 	}
 	public void cealignLasts() {
 		int N = sm.loadedStructures.Count;
 		if (N < 2) {
-			Debug.LogWarning("Not enough structures to align");
+				UnityEngine.Debug.LogWarning("Not enough structures to align");
 			return;
 		}
 		string s1 = sm.loadedStructures[N - 2].ToSelectionName();
@@ -2136,11 +2137,11 @@ public class UIManager : MonoBehaviour {
 				APIPython.connectIMD(APIPython.last().uniqueName, inFIMDIP.text, p);
 			}
 			else {
-				Debug.LogWarning("Load a molecule first");
+				UnityEngine.Debug.LogWarning("Load a molecule first");
 			}
 		}
 		else {
-			Debug.LogWarning("Please enter IP address and port");
+				UnityEngine.Debug.LogWarning("Please enter IP address and port");
 		}
 	}
 	public void disconnectIMD() {
@@ -2150,6 +2151,9 @@ public class UIManager : MonoBehaviour {
 	public void showSurface() {
 		APIPython.showAs("s");
 	}
+	public void saveSelectionToPDB(){
+		APIPython.saveSelectionToPDB();
+    }
 	public void showCartoon() {
 		APIPython.showAs("c");
 	}
@@ -2161,8 +2165,116 @@ public class UIManager : MonoBehaviour {
 		APIPython.showAs("hb");
 		APIPython.setHyperBallMetaphore("VdW");
 	}
+	private int pid;
+	public void StartNamd(){
+			string exe = "namd2";
+			//string args = @"D:\VR\NAMD_2.14_Win64-multicore-CUDA\simulation\alanin\alanin.conf";
+			ReadSaveFilesWithBrowser found = FindObjectOfType<ReadSaveFilesWithBrowser>();
+			ReadSaveFilesWithBrowser rsfwb = found.GetComponent<ReadSaveFilesWithBrowser>();
+			string initPath = rsfwb.initPath;
+			var extensions = new[]
+			{
+					new SFB.ExtensionFilter("NAMD config", "conf"),
+				};
+			string path = null;
+			//Use native file browser for Windows and Mac and WebGL (https://github.com/gkngkc/UnityStandaloneFileBrowser)
+			if (!UnityMolMain.inVR())
+			{
+				path = SFB.StandaloneFileBrowser.OpenFilePanel("Open file", initPath, extensions,false)[0];
+			}
+			else
+			{
+				UnityEngine.Debug.Log("VR saving not implemented.");
+			}
+			System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo();
+			info.FileName = exe;
+			info.Arguments = path;
+			info.CreateNoWindow = true;
+			info.RedirectStandardInput = true;
+			info.RedirectStandardOutput = true;
+			info.RedirectStandardError = true;
+			info.UseShellExecute = false;
+			System.Diagnostics.Process pro = System.Diagnostics.Process.Start(info);
+			pid = pro.Id;
+	}
+		public void StopNamd()
+		{
+			System.Diagnostics.Process pro = System.Diagnostics.Process.GetProcessById(pid);
+			pro.Kill();
+			pro.WaitForExit();
+		}
+		public void wrapperMin(Text t) {
+            if (t.text == "")
+            {
+				Minimization(100);
+				return;
+            }
+			Minimization(int.Parse(t.text));
+	}
+	public void Minimization(int steps){
+			UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+			UnityMolSelection selection = sm.getCurrentSelection();
+			ReadSaveFilesWithBrowser found = FindObjectOfType<ReadSaveFilesWithBrowser>();
+			ReadSaveFilesWithBrowser rsfwb = found.GetComponent<ReadSaveFilesWithBrowser>();
+			string initPath = rsfwb.initPath;
+			APIPython.saveToPDB(selection.name,initPath+"\\tmp.pdb");
+			ProcessStartInfo psi = new ProcessStartInfo();
+			psi.FileName = "obabel";
+			psi.UseShellExecute = false;
+			psi.RedirectStandardOutput = true;
+			psi.Arguments = "\"" + initPath + "\\tmp.pdb\" -O \"" + initPath + "\\tmp2.pdb\" --minimize --step " + steps;
+			UnityEngine.Debug.Log(psi.Arguments);
+			Process p = Process.Start(psi);
+			string strOutput = p.StandardOutput.ReadToEnd();
+			UnityEngine.Debug.Log(strOutput);
+			p.WaitForExit();
+			APIPython.delete(selection.structures[0].name);
+			APIPython.load(initPath + "\\tmp2.pdb");
+		}
+		public void AddH()
+		{
+			UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+			UnityMolSelection selection = sm.getCurrentSelection();
+			ReadSaveFilesWithBrowser found = FindObjectOfType<ReadSaveFilesWithBrowser>();
+			ReadSaveFilesWithBrowser rsfwb = found.GetComponent<ReadSaveFilesWithBrowser>();
+			string initPath = rsfwb.initPath;
+			APIPython.saveToPDB(selection.name, initPath + "\\tmp.pdb");
+			ProcessStartInfo psi = new ProcessStartInfo();
+			psi.FileName = "obabel";
+			psi.UseShellExecute = false;
+			psi.RedirectStandardOutput = true;
+			psi.Arguments = "\"" + initPath + "\\tmp.pdb\" -O \"" + initPath + "\\tmp2.pdb\" -h";
+			UnityEngine.Debug.Log(psi.Arguments);
+			Process p = Process.Start(psi);
+			string strOutput = p.StandardOutput.ReadToEnd();
+			UnityEngine.Debug.Log(strOutput);
+			p.WaitForExit();
+			APIPython.delete(selection.structures[0].name);
+			APIPython.load(initPath + "\\tmp2.pdb");
+		}
+		public void DelH()
+		{
+			UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+			UnityMolSelection selection = sm.getCurrentSelection();
+			ReadSaveFilesWithBrowser found = FindObjectOfType<ReadSaveFilesWithBrowser>();
+			ReadSaveFilesWithBrowser rsfwb = found.GetComponent<ReadSaveFilesWithBrowser>();
+			string initPath = rsfwb.initPath;
+			APIPython.saveToPDB(selection.name, initPath + "\\tmp.pdb");
+			ProcessStartInfo psi = new ProcessStartInfo();
+			psi.FileName = "obabel";
+			psi.UseShellExecute = false;
+			psi.RedirectStandardOutput = true;
+			psi.Arguments = "\"" + initPath + "\\tmp.pdb\" -O \"" + initPath + "\\tmp2.pdb\" -d";
+			UnityEngine.Debug.Log(psi.Arguments);
+			Process p = Process.Start(psi);
+			string strOutput = p.StandardOutput.ReadToEnd();
+			UnityEngine.Debug.Log(strOutput);
+			p.WaitForExit();
+			APIPython.delete(selection.structures[0].name);
+			APIPython.load(initPath + "\\tmp2.pdb");
+		}
 
-	void LateUpdate() {
+		void LateUpdate() {
 #if DISABLE_MAINUI
 		return;
 #endif
@@ -2209,7 +2321,7 @@ public class UIManager : MonoBehaviour {
 			}
 #if UNITY_EDITOR
 			catch (System.Exception e) {
-				Debug.LogError(e);
+					UnityEngine.Debug.LogError(e);
 			}
 #else
 			catch {}
@@ -2222,7 +2334,7 @@ public class UIManager : MonoBehaviour {
 			}
 #if UNITY_EDITOR
 			catch (System.Exception e) {
-				Debug.LogError(e);
+					UnityEngine.Debug.LogError(e);
 			}
 #else
 			catch {}

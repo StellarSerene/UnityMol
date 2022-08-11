@@ -856,7 +856,7 @@ public class PDBReader: Reader {
         if (atomName.Length == 1) {
             return atomName;
         }
-        if (atomName == "CA" && !isHET) {
+        if ((atomName == "CA" || atomName == "CB") && !isHET) {
             return "C";
         }
 
