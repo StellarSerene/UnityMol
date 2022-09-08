@@ -103,7 +103,6 @@ public class ReadSaveFilesWithBrowser : MonoBehaviour
         if (paths != null && paths.Length != 0) {
             if(paths[0] != "")
                 initPath = Path.GetDirectoryName(paths[0]);
-                
             for (int i = 0; i < paths.Length; i++)
             {
                 loadFileFromPath(paths[i], readHetm);
@@ -275,6 +274,19 @@ public class ReadSaveFilesWithBrowser : MonoBehaviour
         {
             Debug.LogError("Could not save to selected file");
         }
+    }
+    IEnumerator ShowSavePDBDialogCoroutine(){
+        yield return FileBrowser.WaitForSaveDialog(false, lastOpenedFolder, "Save File", "Save");
+            if (FileBrowser.Success)
+            {
+                lastOpenedFolder = Path.GetDirectoryName(FileBrowser.Result);
+                UnityMolSelectionManager sm = GetComponent<UnityMolSelectionManager>();
+                API.APIPython.saveToPDB(sm.getCurrentSelection().name,FileBrowser.Result);
+            }
+            else
+            {
+                Debug.LogError("Could not save to selected file");
+            }
     }
 }
 }

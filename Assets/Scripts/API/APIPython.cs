@@ -6383,42 +6383,83 @@ namespace UMol
                 //Use native file browser for Windows and Mac and WebGL (https://github.com/gkngkc/UnityStandaloneFileBrowser)
                 if (!UnityMolMain.inVR())
                 {
-                    path = StandaloneFileBrowser.SaveFilePanel("Save file", initPath, selection.name.Replace("(","_").Replace(")",""), extensions);
+                    path = StandaloneFileBrowser.SaveFilePanel("Save file", initPath, selection.name.Replace("(", "_").Replace(")", ""), extensions);
                 }
                 else
                 {
-                    Debug.Log("VR saving not implemented.");
+
                 }
                 if (path != null)
                 {
                     if (path != "")
                         rsfwb.initPath = Path.GetDirectoryName(path);
                 }
-                //StreamWriter sw = new StreamWriter(path, false);
-                
-                
                 saveToPDB(selection.name, path, false);
-                //foreach (UnityMolAtom atom in selection.atoms)
-                //{
-                //    string seg1 = atom.isHET ? "HETATM" : "ATOM  ";
-                //    string seg2 = String.Format(" {0:D5}",atom.serial);
-                //    string seg3 = String.Format(" {0,4}", atom.name);
-                //    string seg4 = String.Format(" {0,3}", atom.residue.name);
-                //    string seg5 = String.Format(" {0,4}", atom.residue.id);
-                //    string seg6 = String.Format(" {0,1}", atom.residue.id);
-                //    string seg7 = String.Format("{0:F3,8}{1:F3,8}{2:F3,8}", atom.oriPosition.x, atom.oriPosition.y,atom.oriPosition.z);
-                //    string seg8 = String.Format("{0:F2,6}",1.00);
-                //    string seg9 = String.Format("{0:F2,6}", atom.bfactor);
-                //    string line = String.Format(seg1+seg2+seg3+seg4+seg5+seg6+seg7+seg8+seg9);
-                //    Debug.Log(line);
-                //    sw.WriteLine(line);
-                //}
-                //sw.WriteLine("END");
-                //sw.Close();
             }
-            public static void SelectionEnergyMinimization()
+            private static string getinitPath()
             {
+                return FindObjectOfType<ReadSaveFilesWithBrowser>().GetComponent<ReadSaveFilesWithBrowser>().initPath;
+            }
 
+            private static string getCurrentSelectionName()
+            {
+                return UnityMolMain.getSelectionManager().getCurrentSelection().name;
+            }
+            private static int pid;
+            public static void StartNamd()
+            {
+                string initPath = getinitPath();
+                var extensions = new[] { new SFB.ExtensionFilter("NAMD config", "conf"), };
+                string path = null;
+                if (!UnityMolMain.inVR())
+                    path = SFB.StandaloneFileBrowser.OpenFilePanel("Open file", initPath, extensions, false)[0];
+                else
+                    Debug.Log("VR saving not implemented.");
+                System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo("namd2", path);
+                info.CreateNoWindow = true;
+                info.RedirectStandardInput = true;
+                info.RedirectStandardOutput = true;
+                info.RedirectStandardError = true;
+                info.UseShellExecute = false;
+                System.Diagnostics.Process pro = System.Diagnostics.Process.Start(info);
+                pid = pro.Id;
+            }
+            public static void StopNamd()
+            {
+                System.Diagnostics.Process pro = System.Diagnostics.Process.GetProcessById(pid);
+                pro.Kill();
+                pro.WaitForExit();
+            }
+
+            public static void StartProcess(string fname, string args)
+            {
+                string initPath = getinitPath();
+                APIPython.saveToPDB(getCurrentSelectionName(), initPath + "\\tmp.pdb");
+                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(fname, args);
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                System.Diagnostics.Process p = System.Diagnostics.Process.Start(psi);
+                p.WaitForExit();
+                APIPython.deleteSelection(getCurrentSelectionName());
+                APIPython.load(initPath + "\\tmp2.pdb");
+            }
+            public static void Minimization(int steps)
+            {
+                string initPath = getinitPath();
+                String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" --minimize --step {1}", initPath, steps);
+                StartProcess("obabel", args);
+            }
+            public static void AddH()
+            {
+                string initPath = getinitPath();
+                String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" -h",initPath);
+                StartProcess("obabel", args);
+            }
+            public static void DelH()
+            {
+                string initPath = getinitPath();
+                String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" -d",initPath);
+                StartProcess("obabel", args);
             }
         }
     }
