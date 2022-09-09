@@ -31858,7 +31858,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 114617770329099855}
-        m_MethodName: StartNamd
+        m_MethodName: StartNAMD
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -33439,7 +33439,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 114617770329099855}
-        m_MethodName: StopNamd
+        m_MethodName: StopNAMD
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -45246,8 +45246,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 114363262403563247}
   m_HandleRect: {fileID: 224494693844804137}
   m_Direction: 2
-  m_Value: 1.0000004
-  m_Size: 0.80025446
+  m_Value: 1.0000002
+  m_Size: 0.66793895
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

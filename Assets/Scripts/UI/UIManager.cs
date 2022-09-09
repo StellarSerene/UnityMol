@@ -2534,13 +2534,13 @@ namespace UMol
             APIPython.showAs("hb");
             APIPython.setHyperBallMetaphore("VdW");
         }
-        public void StartNamd()
+        public void StartNAMD()
         {
-            APIPython.StartNamd();
+            APIPython.StartNAMD();
         }
-        public void StopNamd()
+        public void StopNAMD()
         {
-            APIPython.StopNamd();
+            APIPython.StopNAMD();
         }
         public void wrapperMin(Text t)
         {

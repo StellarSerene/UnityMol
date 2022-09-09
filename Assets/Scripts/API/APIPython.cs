@@ -6367,99 +6367,91 @@ namespace UMol
                 UnityMolMain.recordPythonCommand("clearAnnotations()");
                 UnityMolMain.recordUndoPythonCommand("");
             }
-            public static void saveSelectionToPDB()
+            
+            private static ReadSaveFilesWithBrowser getReadSaveFilesWithBrowser()
             {
-                UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
-                UnityMolSelection selection = sm.getCurrentSelection();
-                ReadSaveFilesWithBrowser found = FindObjectOfType<ReadSaveFilesWithBrowser>();
-                ReadSaveFilesWithBrowser rsfwb = found.GetComponent<ReadSaveFilesWithBrowser>();
-                string initPath = rsfwb.initPath;
-                Debug.Log("initPath");
-                var extensions = new[]
-                {
-                    new ExtensionFilter("Molecule Files", "pdb"),
-                };
-                string path = null;
-                //Use native file browser for Windows and Mac and WebGL (https://github.com/gkngkc/UnityStandaloneFileBrowser)
-                if (!UnityMolMain.inVR())
-                {
-                    path = StandaloneFileBrowser.SaveFilePanel("Save file", initPath, selection.name.Replace("(", "_").Replace(")", ""), extensions);
-                }
-                else
-                {
-
-                }
-                if (path != null)
-                {
-                    if (path != "")
-                        rsfwb.initPath = Path.GetDirectoryName(path);
-                }
-                saveToPDB(selection.name, path, false);
+                return GameObject.FindObjectOfType<ReadSaveFilesWithBrowser>().GetComponent<ReadSaveFilesWithBrowser>();
             }
             private static string getinitPath()
             {
-                return FindObjectOfType<ReadSaveFilesWithBrowser>().GetComponent<ReadSaveFilesWithBrowser>().initPath;
+                return getReadSaveFilesWithBrowser().initPath;
             }
-
+            private static void setinitPath(string path)
+            {
+                getReadSaveFilesWithBrowser().initPath=path;
+            }
             private static string getCurrentSelectionName()
             {
                 return UnityMolMain.getSelectionManager().getCurrentSelection().name;
             }
-            private static int pid;
-            public static void StartNamd()
+            private static int pid_NAMD;
+            public static void StartNAMD(string path=null)
             {
-                string initPath = getinitPath();
-                var extensions = new[] { new SFB.ExtensionFilter("NAMD config", "conf"), };
-                string path = null;
-                if (!UnityMolMain.inVR())
-                    path = SFB.StandaloneFileBrowser.OpenFilePanel("Open file", initPath, extensions, false)[0];
-                else
-                    Debug.Log("VR saving not implemented.");
-                System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo("namd2", path);
-                info.CreateNoWindow = true;
-                info.RedirectStandardInput = true;
-                info.RedirectStandardOutput = true;
-                info.RedirectStandardError = true;
-                info.UseShellExecute = false;
-                System.Diagnostics.Process pro = System.Diagnostics.Process.Start(info);
-                pid = pro.Id;
+                ReadSaveFilesWithBrowser rsfwb = getReadSaveFilesWithBrowser();
+                if (path == null)//not returned from VR coroutine
+                    path = rsfwb.pathForConfRead();//try to read
+                if (path == null)//started VR coroutine
+                    return;//wait for coroutine to return
+                pid_NAMD = StartProcess("namd2", path).Id;
+                string selName = getCurrentSelectionName();
+                int port=2030;
+                //read port from conf
+                API.APIPython.connectIMD(APIPython.last().uniqueName, "127.0.0.1", port);
             }
-            public static void StopNamd()
+            public static void StopNAMD()
             {
-                System.Diagnostics.Process pro = System.Diagnostics.Process.GetProcessById(pid);
+                APIPython.disconnectIMD(APIPython.last().uniqueName);
+                System.Diagnostics.Process pro = System.Diagnostics.Process.GetProcessById(pid_NAMD);
                 pro.Kill();
                 pro.WaitForExit();
             }
-
-            public static void StartProcess(string fname, string args)
+            public static void saveSelectionToPDB(string path = null)
             {
-                string initPath = getinitPath();
-                APIPython.saveToPDB(getCurrentSelectionName(), initPath + "\\tmp.pdb");
+                string selName = getCurrentSelectionName();
+                ReadSaveFilesWithBrowser rsfwb = getReadSaveFilesWithBrowser();
+                if (path == null)//not returned from VR coroutine
+                    path = rsfwb.pathForPDBSave();//try to save
+                if (path == null)//started VR coroutine
+                    return;//wait for coroutine to return
+                setinitPath(path);
+                saveToPDB(selName, path, false);
+            }
+            private static System.Diagnostics.Process StartProcess(string fname, string args)
+            {
                 System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(fname, args);
+                psi.CreateNoWindow = true;
                 psi.UseShellExecute = false;
                 psi.RedirectStandardOutput = true;
-                System.Diagnostics.Process p = System.Diagnostics.Process.Start(psi);
+                return System.Diagnostics.Process.Start(psi);
+            }
+            private static void StartOBProcess(string args)
+            {
+                string initPath = getinitPath();
+                string selName = getCurrentSelectionName();
+                APIPython.saveToPDB(selName, initPath + "\\tmp.pdb");
+                System.Diagnostics.Process p = StartProcess("obabel",args);
                 p.WaitForExit();
-                APIPython.deleteSelection(getCurrentSelectionName());
+                UnityMolStructureManager sm = UnityMolMain.getStructureManager();
+                APIPython.delete(sm.GetCurrentStructure().name);
                 APIPython.load(initPath + "\\tmp2.pdb");
             }
             public static void Minimization(int steps)
             {
                 string initPath = getinitPath();
                 String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" --minimize --step {1}", initPath, steps);
-                StartProcess("obabel", args);
+                StartOBProcess(args);
             }
             public static void AddH()
             {
                 string initPath = getinitPath();
                 String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" -h",initPath);
-                StartProcess("obabel", args);
+                StartOBProcess(args);
             }
             public static void DelH()
             {
                 string initPath = getinitPath();
                 String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" -d",initPath);
-                StartProcess("obabel", args);
+                StartOBProcess(args);
             }
         }
     }
