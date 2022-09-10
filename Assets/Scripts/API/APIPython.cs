@@ -6395,7 +6395,8 @@ namespace UMol
                 pid_NAMD = StartProcess("namd2", path).Id;
                 string selName = getCurrentSelectionName();
                 int port=2030;
-                //read port from conf
+                //TO DO:read port from conf
+                System.Threading.Thread.Sleep(100);
                 API.APIPython.connectIMD(APIPython.last().uniqueName, "127.0.0.1", port);
             }
             public static void StopNAMD()
@@ -6426,32 +6427,58 @@ namespace UMol
             }
             private static void StartOBProcess(string args)
             {
-                string initPath = getinitPath();
+                UnityMolSelectionManager slm = UnityMolMain.getSelectionManager();
+                UnityMolStructure st = slm.getCurrentSelection().structures[0];
+                string stName = st.name;
+                string path = Application.temporaryCachePath;
+                args = String.Format("\"{0}\\{1}_in.pdb\" -O \"{0}\\{1}.pdb\"", path, stName) + args;
+                
                 string selName = getCurrentSelectionName();
-                APIPython.saveToPDB(selName, initPath + "\\tmp.pdb");
+                APIPython.saveToPDB(selName, path + String.Format("\\{0}_in.pdb",stName));
                 System.Diagnostics.Process p = StartProcess("obabel",args);
                 p.WaitForExit();
-                UnityMolStructureManager sm = UnityMolMain.getStructureManager();
-                APIPython.delete(sm.GetCurrentStructure().name);
-                APIPython.load(initPath + "\\tmp2.pdb");
+
+                Vector3 pos = Vector3.zero, rot = Vector3.zero;
+                APIPython.getStructurePositionRotation(stName, ref pos, ref rot);
+                APIPython.delete(stName);
+                APIPython.load(path + String.Format("\\{0}.pdb", stName));
+                APIPython.setStructurePositionRotation(stName, pos, rot);
             }
             public static void Minimization(int steps)
             {
-                string initPath = getinitPath();
-                String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" --minimize --step {1}", initPath, steps);
+                String args = String.Format(" --minimize --step {0}",steps);
                 StartOBProcess(args);
             }
             public static void AddH()
             {
-                string initPath = getinitPath();
-                String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" -h",initPath);
+                String args = String.Format(" -h");
                 StartOBProcess(args);
             }
             public static void DelH()
             {
-                string initPath = getinitPath();
-                String args = String.Format("\"{0}\\tmp.pdb\" -O \"{0}\\tmp2.pdb\" -d",initPath);
+                String args = String.Format(" -d");
                 StartOBProcess(args);
+            }
+            public static void FindTerminalsOfSelection()
+            {
+                UnityMolSelection sl = UnityMolMain.getSelectionManager().getCurrentSelection(); 
+                foreach (UnityMolStructure st in sl.structures)
+                {
+                    foreach (KeyValuePair<String,UnityMolChain> p in st.currentModel.chains)
+                    {
+                        foreach (KeyValuePair<int, UnityMolResidue> r in p.Value.residues)
+                        {
+                            UnityMolResidue rs = r.Value;
+                            Debug.Log(rs.id);
+                            Debug.Log(rs.allAtoms.Count);
+                        }
+                    }
+                }
+            }
+            public static void HighLightTerminals()
+            {
+                UnityMolHighlightManager hm = UnityMolMain.getHighlightManager();
+                UnityMolSelection s;
             }
         }
     }
