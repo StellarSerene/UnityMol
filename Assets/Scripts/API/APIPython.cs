@@ -6459,26 +6459,35 @@ namespace UMol
                 String args = String.Format(" -d");
                 StartOBProcess(args);
             }
-            public static void FindTerminalsOfSelection()
-            {
-                UnityMolSelection sl = UnityMolMain.getSelectionManager().getCurrentSelection(); 
-                foreach (UnityMolStructure st in sl.structures)
-                {
-                    foreach (KeyValuePair<String,UnityMolChain> p in st.currentModel.chains)
-                    {
-                        foreach (KeyValuePair<int, UnityMolResidue> r in p.Value.residues)
-                        {
-                            UnityMolResidue rs = r.Value;
-                            Debug.Log(rs.id);
-                            Debug.Log(rs.allAtoms.Count);
-                        }
-                    }
-                }
-            }
-            public static void HighLightTerminals()
+            public static void FindTerminalsOfSelection(string selName=null)
             {
                 UnityMolHighlightManager hm = UnityMolMain.getHighlightManager();
-                UnityMolSelection s;
+                UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+                UnityMolSelection sl;
+                if (selName != null)
+                    sl = sm.selections[selName];
+                else
+                    sl = sm.getCurrentSelection();
+                selName = sl.name;
+                foreach (UnityMolStructure st in sl.structures)
+                {
+                    foreach (KeyValuePair<String, UnityMolChain> p in st.currentModel.chains)
+                    {
+                        int count = p.Value.residues.Count;
+                        
+                        UnityMolResidue r1= p.Value.residues[1], r2;//two terminal residues
+                        List<UnityMolAtom> atoms = new List<UnityMolAtom>(200);
+                        atoms.AddRange(r1.allAtoms);
+                        if (count != 1)
+                        {
+                            r2 = p.Value.residues[count];
+                            atoms.AddRange(r2.allAtoms);
+                        }
+                        UnityMolSelection sel = new UnityMolSelection(atoms, "terminals of " + selName);
+                        sm.SetCurrentSelection(sel);
+                        hm.HighlightAtoms(sel);
+                    }
+                }
             }
         }
     }

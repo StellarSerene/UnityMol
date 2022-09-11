@@ -209,6 +209,9 @@ public class PDBReader: Reader {
             int cptAltern = 0;
             int lineNumber = 0;
             int idA = 0;
+
+            string[] allLines;
+
             while ((line = sr.ReadLine()) != null) {
                 lineNumber++;
                 try {
@@ -856,7 +859,7 @@ public class PDBReader: Reader {
         if (atomName.Length == 1) {
             return atomName;
         }
-        if ((atomName == "CA" || atomName == "CB") && !isHET) {
+        if ((atomName[0]=='C') && !isHET) {
             return "C";
         }
 
