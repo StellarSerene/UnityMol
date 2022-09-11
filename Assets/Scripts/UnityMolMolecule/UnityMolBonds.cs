@@ -150,6 +150,55 @@ public class UnityMolBonds {
 		AddDual(bonded, atom);
 	}
 
+	public void Remove(UnityMolAtom atom, UnityMolAtom bonded) {
+		UnityMolAtom[] res = null;
+		bool removed = false;
+		if (bonds.TryGetValue(atom, out res)) {
+			for (int i = 0; i < NBBONDS; i++) {
+				if (res[i] != null && res[i] == bonded) {
+					Debug.Log("removed 1 bond.");
+					for (int j = i; j < NBBONDS; j++)
+                    {
+						if(j == NBBONDS-1 || res[j+1] == null ) { //last bond in bond list
+							res[i] = res[j];
+							res[j] = null;//move to current position and make last position null
+							break;
+						}
+					}
+					removed = true;
+				}
+				if (res[i] == null) 
+					break;
+			}
+		}
+		if (bonds.TryGetValue(bonded, out res)){
+			for (int i = 0; i < NBBONDS; i++){
+				if (res[i] != null && res[i] == atom)
+				{
+					Debug.Log("removed 1 bond.");
+					for (int j = i; j < NBBONDS; j++)
+					{
+						if (j == NBBONDS - 1 || res[j + 1] == null)//last bond in bond list
+							{ 
+							res[i] = res[j];
+							res[j] = null;//move to current position and make last position null
+							break;
+						}
+					}
+					removed = true;
+				}
+				if (res[i] == null)
+					break;
+			}
+		}
+		if (!removed)
+		{
+			Debug.LogError("No bonds exist between selected atoms");
+		}
+		RemoveDual(atom, bonded);
+		RemoveDual(bonded, atom);
+	}
+
 	private void AddDual(UnityMolAtom atom, UnityMolAtom bonded) {
 		UnityMolAtom[] res = null;
 		if (bondsDual.TryGetValue(atom, out res)) {
@@ -174,6 +223,40 @@ public class UnityMolBonds {
 			for (int i = 0; i < NBBONDS; i++)
 				bondsDual[atom][i] = null;
 			bondsDual[atom][0] = bonded;
+		}
+	}
+
+	private void RemoveDual(UnityMolAtom atom, UnityMolAtom bonded)
+    {
+		UnityMolAtom[] res = null;
+		if (bondsDual.TryGetValue(atom, out res))
+		{
+			bool removed = false;
+			for (int i = 0; i < NBBONDS; i++)
+			{
+				if (res[i] != null && res[i] == bonded)
+				{
+					for (int j = i; j < NBBONDS; j++)
+					{
+						if (j == NBBONDS - 1 || res[j + 1] == null)//last bond in bond list
+						{ 
+							res[i] = res[j];
+							res[j] = null;//move to current position and make last position null
+							break;
+						}
+					}
+					removed = true;
+					break;
+				}
+			}
+			if (!removed)
+			{
+				Debug.LogError("No bonds exist between selected atoms");
+			}
+		}
+		else
+		{
+			Debug.LogError("No bonds exist between selected atoms");
 		}
 	}
 
@@ -304,6 +387,8 @@ public class UnityMolBonds {
 
 		return result;
 	}
-
+	public void RemoveBond(UnityMolAtom a,UnityMolAtom b){
+		
+    }
 }
 }

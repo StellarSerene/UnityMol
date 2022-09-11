@@ -6489,6 +6489,53 @@ namespace UMol
                     }
                 }
             }
+            public static void RemoveBond(string selName=null)
+            {
+                UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+                UnityMolStructureManager tm = UnityMolMain.getStructureManager();
+                UnityMolSelection sl;
+                if (selName != null)
+                    sl = sm.selections[selName];
+                else
+                    sl = sm.getCurrentSelection();
+                if (sl.structures.Count != 1)
+                {
+                    Debug.LogWarning("Selected atoms not in the same structure.");
+                    return;
+                }
+                UnityMolStructure st = tm.GetStructure(sl.structures[0].name);
+                if (sl.atoms.Count != 2)
+                {
+                    Debug.LogWarning("Must select two atoms.");
+                    return;
+                }
+                Debug.Log("before");
+                int i = 0;
+                foreach(KeyValuePair<UnityMolAtom,UnityMolAtom[]>p in st.models[0].bonds.bonds)
+                {
+                    foreach(UnityMolAtom atom2 in p.Value)
+                    {
+                        if(atom2!=null)
+                            Debug.Log(i++ + p.Key.name + atom2.name);
+                    }
+                }
+                st.models[0].bonds.Remove(sl.atoms[0], sl.atoms[1]);
+                i = 0;
+                foreach (KeyValuePair<UnityMolAtom, UnityMolAtom[]> p in st.models[0].bonds.bonds)
+                {
+                    foreach (UnityMolAtom atom2 in p.Value)
+                    {
+                        if (atom2 != null)
+                            Debug.Log(i++ + p.Key.name + atom2.name);
+                    }
+                }
+                foreach (UnityMolSelection sli in sm.selections.Values)
+                {
+                   updateRepresentations(sli.name);
+                }
+                UnityMolMain.getCustomRaycast().needsFullUpdate = true;
+                UnityMolMain.getPrecompRepManager().Clear(st.uniqueName);
+            }
         }
     }
 }
