@@ -6542,16 +6542,12 @@ namespace UMol
                     }
                 }
             }
-            public static void RemoveBond(string selName=null)
+            public static void RemoveBond(UnityMolSelection sl=null)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
                 UnityMolStructureManager tm = UnityMolMain.getStructureManager();
-                UnityMolSelection sl;
-                if (selName != null)
-                    sl = sm.selections[selName];
-                else
+                if (sl == null)
                     sl = sm.getCurrentSelection();
-                selName = sl.name;
                 if (sl.structures.Count != 1)
                 {
                     Debug.LogWarning("Selected atoms not in the same structure.");
@@ -6563,7 +6559,6 @@ namespace UMol
                     Debug.LogWarning("Must select two atoms.");
                     return;
                 }
-                UnityMolBondBondOrderManager bbom;
                 st.models[0].bonds.Remove(sl.atoms[0], sl.atoms[1]);
 
                 string path = Application.temporaryCachePath;
@@ -6577,16 +6572,12 @@ namespace UMol
                 APIPython.load(path + String.Format("\\{0}.pdb", stName));
                 APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
             }
-            public static void AddBond(string selName = null)
+            public static void AddBond(UnityMolSelection sl = null)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
                 UnityMolStructureManager tm = UnityMolMain.getStructureManager();
-                UnityMolSelection sl;
-                if (selName != null)
-                    sl = sm.selections[selName];
-                else
+                if (sl == null)
                     sl = sm.getCurrentSelection();
-                selName = sl.name;
                 if (sl.structures.Count != 1)
                 {
                     //TODO: merge structure
@@ -6598,7 +6589,6 @@ namespace UMol
                     Debug.LogWarning("Must select two atoms.");
                     return;
                 }
-                UnityMolBondBondOrderManager bbom;
                 st.models[0].bonds.Add(sl.atoms[0], sl.atoms[1]);
 
                 string path = Application.temporaryCachePath;
@@ -6611,6 +6601,52 @@ namespace UMol
                 APIPython.delete(stName);
                 APIPython.load(path + String.Format("\\{0}.pdb", stName));
                 APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
+            }
+            public static bool isConnected(UnityMolSelection sl=null)
+            {
+                UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+                UnityMolStructureManager tm = UnityMolMain.getStructureManager();
+                if (sl == null)
+                    sl = sm.getCurrentSelection();
+                if (sl.structures.Count != 1)
+                {
+                    Debug.Log("Not connected");
+                    return false;
+                }
+                UnityMolStructure st = tm.GetStructure(sl.structures[0].name);
+                if (sl.atoms.Count != 2)
+                {
+                    Debug.LogWarning("Must select two atoms.");
+                    return false;
+                }
+                UnityMolAtom a1 = sl.atoms[0],a2 = sl.atoms[1];
+                HashSet<UnityMolAtom> v= new HashSet<UnityMolAtom>();
+                v.Add(a1);
+                bool dfs(UnityMolAtom a)
+                {
+                    if (a == a2)
+                    {
+                        return true;
+                    }
+                    bool r=false;
+                    //foreach(UnityMolAtom bonded in sl.bonds.bondsDual[a])
+                    Dictionary<UnityMolAtom,UnityMolAtom[]> connectivity = sl.structures[0].models[0].bonds.bondsDual;
+                    for (int i=0;i< connectivity[a].Count();i++)
+                    {
+                        UnityMolAtom bonded = connectivity[a][i];
+                        if (bonded == null)
+                            break;
+                        if (v.Contains(bonded))
+                            continue;
+                        v.Add(bonded);
+                        r = r | dfs(bonded);
+                        v.Remove(bonded);
+                    }
+                    return r;
+                }
+                bool rr=dfs(a1);
+                Debug.Log(rr?"Connected":"Not connected");
+                return rr;
             }
         }
     }
