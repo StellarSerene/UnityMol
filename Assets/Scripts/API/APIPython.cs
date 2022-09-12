@@ -6565,12 +6565,46 @@ namespace UMol
                 }
                 UnityMolBondBondOrderManager bbom;
                 st.models[0].bonds.Remove(sl.atoms[0], sl.atoms[1]);
-                //sl.bonds.Remove(sl.atoms[0], sl.atoms[1]);
 
                 string path = Application.temporaryCachePath;
                 string stName = st.name;
 
                 APIPython.saveToPDB("all("+stName+")", path + String.Format("\\{0}.pdb", stName));
+
+                Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;
+                APIPython.getStructurePositionRotationScale(stName, ref pos, ref rot, ref scale);
+                APIPython.delete(stName);
+                APIPython.load(path + String.Format("\\{0}.pdb", stName));
+                APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
+            }
+            public static void AddBond(string selName = null)
+            {
+                UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+                UnityMolStructureManager tm = UnityMolMain.getStructureManager();
+                UnityMolSelection sl;
+                if (selName != null)
+                    sl = sm.selections[selName];
+                else
+                    sl = sm.getCurrentSelection();
+                selName = sl.name;
+                if (sl.structures.Count != 1)
+                {
+                    //TODO: merge structure
+                    return;
+                }
+                UnityMolStructure st = tm.GetStructure(sl.structures[0].name);
+                if (sl.atoms.Count != 2)
+                {
+                    Debug.LogWarning("Must select two atoms.");
+                    return;
+                }
+                UnityMolBondBondOrderManager bbom;
+                st.models[0].bonds.Add(sl.atoms[0], sl.atoms[1]);
+
+                string path = Application.temporaryCachePath;
+                string stName = st.name;
+
+                APIPython.saveToPDB("all(" + stName + ")", path + String.Format("\\{0}.pdb", stName));
 
                 Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;
                 APIPython.getStructurePositionRotationScale(stName, ref pos, ref rot, ref scale);
