@@ -439,7 +439,12 @@ public class AtomDuo {
 		}
 		return lhash;
 	}
-}
+
+    public override string ToString()
+    {
+		return string.Format("L({0}, {1})",a1.ToString(),a2.ToString());
+    }
+    }
 
 public class AtomTrio {
 

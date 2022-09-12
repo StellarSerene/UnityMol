@@ -152,50 +152,66 @@ public class UnityMolBonds {
 		AddDual(bonded, atom);
 	}
 
-	public void Remove(UnityMolAtom atom, UnityMolAtom bonded) {
+	public void Remove(UnityMolAtom atom, UnityMolAtom bonded=null) {
+	    Debug.Log("Removing "+atom.number+"--"+(bonded==null?-1:bonded.number));
 		UnityMolAtom[] res = null;
-		bool removed = false;
-		if (bonds.TryGetValue(atom, out res)) {
+
+		//Removing atom--bonded or atom--all
+		if (bonds.TryGetValue(atom, out res)) { //atom--res[i] in bonds
 			for (int i = 0; i < NBBONDS; i++) {
-				if (res[i] != null && res[i] == bonded) {
-					Debug.Log("removed 1 bond.");
-					for (int j = i; j < NBBONDS; j++)
-                    {
-						if(j == NBBONDS-1 || res[j+1] == null ) { //last bond in bond list
-							res[i] = res[j];
-							res[j] = null;//move to current position and make last position null
-							break;
-						}
-					}
-					removed = true;
-				}
-				if (res[i] == null) 
-					break;
-			}
-		}
-		if (bonds.TryGetValue(bonded, out res)){
-			for (int i = 0; i < NBBONDS; i++){
-				if (res[i] != null && res[i] == atom)
-				{
-					Debug.Log("removed 1 bond.");
-					for (int j = i; j < NBBONDS; j++)
-					{
-						if (j == NBBONDS - 1 || res[j + 1] == null)//last bond in bond list
-							{ 
-							res[i] = res[j];
-							res[j] = null;//move to current position and make last position null
-							break;
-						}
-					}
-					removed = true;
-				}
 				if (res[i] == null)
 					break;
+				if (bonded == null)
+				{
+					res[i] = null;
+					continue;
+				}
+				else if (res[i] != null && res[i] == bonded) {
+					for (int j = i; j < NBBONDS; j++)
+                    {
+						if (j == NBBONDS-1 || res[j+1] == null ) { //last bond in bond list
+							res[i] = res[j];
+							res[j] = null;//move to current position and make last position null
+							if (j == 0)
+								bonds.Remove(atom);
+							break;
+						}
+					}
+				}
+				
 			}
 		}
-		if (!removed)
-		{
-			Debug.LogError("No bonds exist between selected atoms");
+		UnityMolAtom[] res2 = null;
+
+		List<UnityMolAtom> rm = new List<UnityMolAtom>(50);
+		//Removing all-atom or bonded-atom
+		foreach (UnityMolAtom atom2 in bonds.Keys)
+        {
+			if(bonds.TryGetValue(atom2, out res2))
+			{
+				for (int i = 0; i < NBBONDS; i++)
+				{
+					if (res2[i] == null)
+						break;
+					if (res2[i] != null && res2[i] == atom && (bonded==null || atom2==bonded))
+					{
+						for (int j = i; j < NBBONDS; j++)
+						{
+							if (j == NBBONDS - 1 || res2[j + 1] == null)//last bond in bond list
+							{
+								res2[i] = res2[j];
+								res2[j] = null;//move to current position and make last position null
+								if (j == 0)
+									rm.Add(atom2);
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		foreach(UnityMolAtom rmi in rm) {
+			bonds.Remove(rmi);	
 		}
 		RemoveDual(atom, bonded);
 		RemoveDual(bonded, atom);
@@ -203,6 +219,8 @@ public class UnityMolBonds {
 
 	private void AddDual(UnityMolAtom atom, UnityMolAtom bonded) {
 		UnityMolAtom[] res = null;
+		if (atom == null)
+			return;
 		if (bondsDual.TryGetValue(atom, out res)) {
 			bool added = false;
 			for (int i = 0; i < NBBONDS; i++) {
@@ -228,15 +246,19 @@ public class UnityMolBonds {
 		}
 	}
 
-	private void RemoveDual(UnityMolAtom atom, UnityMolAtom bonded)
+	private void RemoveDual(UnityMolAtom atom, UnityMolAtom bonded=null)
     {
 		UnityMolAtom[] res = null;
-		if (bondsDual.TryGetValue(atom, out res))
+		if (atom != null && bondsDual.TryGetValue(atom, out res))
 		{
-			bool removed = false;
 			for (int i = 0; i < NBBONDS; i++)
 			{
-				if (res[i] != null && res[i] == bonded)
+                if (bonded==null)
+                {
+				    res[i] = null;
+					continue;
+                }
+				else if (res[i] != null && res[i] == bonded)
 				{
 					for (int j = i; j < NBBONDS; j++)
 					{
@@ -244,28 +266,47 @@ public class UnityMolBonds {
 						{ 
 							res[i] = res[j];
 							res[j] = null;//move to current position and make last position null
+							if (j == 0)
+								bondsDual.Remove(atom);
 							break;
 						}
 					}
-					removed = true;
 					break;
 				}
 			}
-			if (!removed)
-			{
-				Debug.LogError("No bonds exist between selected atoms");
-			}
 		}
-		else
-		{
-			Debug.LogError("No bonds exist between selected atoms");
-		}
-	}
+        if (bonded != null && bondsDual.TryGetValue(bonded, out res))
+        {
+            for (int i = 0; i < NBBONDS; i++)
+            {
+                if (atom == null)
+                {
+                    res[i] = null;
+                    continue;
+                }
+                else if (res[i] != null && res[i] == atom)
+                {
+                    for (int j = i; j < NBBONDS; j++)
+                    {
+                        if (j == NBBONDS - 1 || res[j + 1] == null)//last bond in bond list
+                        {
+                            res[i] = res[j];
+                            res[j] = null;//move to current position and make last position null
+							if (j == 0)
+								bondsDual.Remove(bonded);
+							break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
-	/// <summary>
-	/// Returns the number of atoms bonded to the atom A
-	/// </summary>
-	public int countBondedAtoms(UnityMolAtom a) {
+        /// <summary>
+        /// Returns the number of atoms bonded to the atom A
+        /// </summary>
+        public int countBondedAtoms(UnityMolAtom a) {
 		try {
 			UnityMolAtom[] res = bondsDual[a];
 			int count = 0;
@@ -372,6 +413,72 @@ public class UnityMolBonds {
 		return result;
 	}
 
+	public void PrintBonds(UnityMolAtom a1)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+		UnityMolAtom[] res;
+        if (bonds.TryGetValue(a1,out res))
+        {
+			if (res[0] != null)
+				sb.Append(string.Format("\nCONECT {0}-",a1.number));
+			for(int i = 0; i < res.Count(); i++)
+			{
+				if (res[i] == null)
+					break;
+				sb.Append(string.Format(" {0}", res[i].number));
+			}
+        }
+		foreach(UnityMolAtom a2 in bonds.Keys)
+			if (bonds.TryGetValue(a2,out res))
+			{
+				bool flag=false;
+				for(int i = 0; i < res.Count(); i++)
+				{
+					if (res[i] == null)
+						break;
+                    if (res[i] == a1) {
+                        if (!flag)
+                        {
+							flag=true;
+							sb.Append(string.Format("\nCONECT {0}-", a2.number));
+						}
+						sb.Append(string.Format(" {0}", a1.number));
+					}
+				}
+			}
+		
+		if (bondsDual.TryGetValue(a1,out res))
+        {
+			sb.Append(string.Format("\nBICONECT {0}-", a1.number));
+			for(int i = 0; i < res.Count(); i++)
+			{
+			   if (res[i] == null)
+					break;
+				sb.Append(string.Format(" {0}", res[i].number));
+			}
+		}
+
+		foreach(UnityMolAtom a2 in bondsDual.Keys) { 
+			if (bondsDual[a2]==null || bondsDual[a2][0] == null)
+				continue;
+			bool flag = false;
+			for(int i = 0; i < bondsDual[a2].Count(); i++)
+			{
+				if (bondsDual[a2][i] == null)
+					break;
+				if (bondsDual[a2][i] == a1)
+				{
+					if (!flag)
+                    {
+						sb.Append(string.Format("\nBICONECT {0}-", a2.number));
+						flag = true;
+					}
+					sb.Append(string.Format(" {0}", a1.number));
+				}
+			}
+		}
+		Debug.Log(sb);
+	}
 	/// <summary>
 	/// Return a flatten list of atom couples bidirectional
 	/// </summary>
@@ -389,8 +496,5 @@ public class UnityMolBonds {
 
 		return result;
 	}
-	public void RemoveBond(UnityMolAtom a,UnityMolAtom b){
-		
-    }
 }
 }

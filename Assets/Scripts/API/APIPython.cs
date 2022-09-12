@@ -6542,7 +6542,7 @@ namespace UMol
                     }
                 }
             }
-            public static void RemoveBond(UnityMolSelection sl=null)
+            public static void RemoveBond(UnityMolSelection sl=null,bool sever=false)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
                 UnityMolStructureManager tm = UnityMolMain.getStructureManager();
@@ -6559,18 +6559,24 @@ namespace UMol
                     Debug.LogWarning("Must select two atoms.");
                     return;
                 }
-                st.models[0].bonds.Remove(sl.atoms[0], sl.atoms[1]);
+                UnityMolBonds bonds = st.models[0].bonds;
+                bonds.PrintBonds(sl.atoms[0]);
+                bonds.PrintBonds(sl.atoms[1]);
+                bonds.Remove(sl.atoms[0], sl.atoms[1]);
+                bonds.PrintBonds(sl.atoms[0]);
+                bonds.PrintBonds(sl.atoms[1]);
 
                 string path = Application.temporaryCachePath;
                 string stName = st.name;
 
-                APIPython.saveToPDB("all("+stName+")", path + String.Format("\\{0}.pdb", stName));
+                APIPython.saveToPDB("all(" + stName + ")", path + String.Format("\\{0}.pdb", stName));
 
                 Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;
                 APIPython.getStructurePositionRotationScale(stName, ref pos, ref rot, ref scale);
                 APIPython.delete(stName);
                 APIPython.load(path + String.Format("\\{0}.pdb", stName));
                 APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
+                //updateRepresentations("all(" + stName + ")");
             }
             public static void AddBond(UnityMolSelection sl = null)
             {
@@ -6648,16 +6654,33 @@ namespace UMol
                 Debug.Log(rr?"Connected":"Not connected");
                 return rr;
             }
+            public static void RemoveAtom(UnityMolSelection sl=null)
+            {
+                UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+                UnityMolStructureManager tm = UnityMolMain.getStructureManager();
+                if (sl == null)
+                    sl = sm.getCurrentSelection();
+                if (sl.atoms.Count() != 1)
+                {
+                    Debug.Log("Must select 1 atom.");
+                    return;
+                }
+                UnityMolAtom atom = sl.atoms[0];
+                UnityMolStructure st = sl.structures[0];
+
+                st.models[0].bonds.Remove(atom);
+                //st.models[0].allAtoms.Remove(atom);
+
+                string stName = st.name;
+
+                APIPython.saveToPDB("all(" + stName + ")", path + String.Format("\\{0}.pdb", stName));
+
+                Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;
+                APIPython.getStructurePositionRotationScale(stName, ref pos, ref rot, ref scale);
+                APIPython.delete(stName);
+                APIPython.load(path + String.Format("\\{0}.pdb", stName));
+                APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
+            }
         }
     }
 }
-
-//i = 0;
-//foreach (KeyValuePair<UnityMolAtom, UnityMolAtom[]> p in st.models[0].bonds.bonds)
-//{
-//    foreach (UnityMolAtom atom2 in p.Value)
-//    {
-//        if (atom2 != null)
-//            Debug.Log(i++ + p.Key.name + atom2.name);
-//    }
-//}

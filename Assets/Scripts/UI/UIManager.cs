@@ -2563,6 +2563,14 @@ namespace UMol
         {
             APIPython.DelH();
         }
+        public void AddBond()
+        {
+            APIPython.AddBond();
+        }
+        public void DelBond()
+        {
+            APIPython.RemoveBond();
+        }
 
         void LateUpdate()
         {

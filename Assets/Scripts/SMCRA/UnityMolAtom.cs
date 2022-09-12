@@ -237,6 +237,20 @@ public class UnityMolAtom {
 		return e.ToString();
 	}
 
+	public string ToShort (){
+		StringBuilder e = new StringBuilder();
+		e.Append("<");
+		if (residue != null) {
+			e.Append(residue.name);
+			e.Append("_");
+			e.Append(residue.id);
+			e.Append(" | ");
+		}
+		e.Append(name);
+		e.Append(">");
+		return e.ToString();
+	}
+
 
 	/// <summary>
 	/// Clone a UnityMolAtom
