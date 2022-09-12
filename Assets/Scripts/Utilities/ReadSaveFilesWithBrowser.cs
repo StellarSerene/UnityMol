@@ -102,7 +102,7 @@ namespace UMol
                 }
                 else
                 {
-                    API.APIPython.load(path, readHetm);
+                    API.APIPython.load(path, readHetm,false,true,true);
                 }
             }
         }

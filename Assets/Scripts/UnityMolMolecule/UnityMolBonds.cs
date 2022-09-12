@@ -101,7 +101,9 @@ public class UnityMolBonds {
 	}
 
 	public Dictionary<UnityMolAtom, UnityMolAtom[]> Dbonds {
-		get { return bonds; }
+		get {
+		return bonds; 
+		}
 	}
 
 	/// <summary>

@@ -103,7 +103,7 @@ namespace UMol
             /// <summary>
             /// Load a local molecular file (pdb/mmcif/gro/mol2/sdf/xyz formats)
             /// </summary>
-            public static UnityMolStructure load(string filePath, bool readHetm = true, bool forceDSSP = false, bool showDefaultRep = true, bool center = true, bool modelsAsTraj = true)
+            public static UnityMolStructure load(string filePath, bool readHetm = true, bool forceDSSP = false, bool showDefaultRep = true, bool center = false, bool modelsAsTraj = true)
             {
 
                 UnityMolStructure newStruct = null;
@@ -4579,6 +4579,40 @@ namespace UMol
                                                      saveRot.y.ToString("F4", culture) + ", " + saveRot.z.ToString("F4", culture) + "))");
             }
 
+            public static void setStructurePositionRotationScale(string structureName, Vector3 pos, Vector3 rot, Vector3 scale)
+            {
+
+                UnityMolStructureManager sm = UnityMolMain.getStructureManager();
+                UnityMolStructure s = sm.GetStructure(structureName);
+
+                Vector3 savePos = Vector3.zero;
+                Vector3 saveRot = Vector3.zero;
+                if (s != null)
+                {
+                    GameObject sgo = sm.structureToGameObject[s.uniqueName];
+                    savePos = sgo.transform.localPosition;
+                    saveRot = sgo.transform.localEulerAngles;
+
+                    sgo.transform.localPosition = pos;
+                    sgo.transform.localRotation = Quaternion.Euler(rot);
+                    sgo.transform.localScale = scale;
+                }
+                else
+                {
+                    Debug.LogError("Wrong structure name");
+                    return;
+                }
+
+                UnityMolMain.recordPythonCommand("setStructurePositionRotation( \"" + structureName + "\", Vector3(" + pos.x.ToString("F4", culture) + ", " +
+                                                 pos.y.ToString("F4", culture) + ", " + pos.z.ToString("F4", culture) + "), " +
+                                                 "Vector3(" + rot.x.ToString("F4", culture) + ", " +
+                                                 rot.y.ToString("F4", culture) + ", " + rot.z.ToString("F4", culture) + "))");
+                UnityMolMain.recordUndoPythonCommand("setStructurePositionRotation( \"" + structureName + "\", Vector3(" + savePos.x.ToString("F4", culture) + ", " +
+                                                     savePos.y.ToString("F4", culture) + ", " + savePos.z.ToString("F4", culture) + "), " +
+                                                     "Vector3(" + saveRot.x.ToString("F4", culture) + ", " +
+                                                     saveRot.y.ToString("F4", culture) + ", " + saveRot.z.ToString("F4", culture) + "))");
+            }
+
             public static void getStructurePositionRotation(string structureName, ref Vector3 pos, ref Vector3 rot)
             {
                 UnityMolStructureManager sm = UnityMolMain.getStructureManager();
@@ -4589,6 +4623,25 @@ namespace UMol
                     GameObject sgo = sm.structureToGameObject[s.uniqueName];
                     pos = sgo.transform.localPosition;
                     rot = sgo.transform.localEulerAngles;
+                    return;
+                }
+                else
+                {
+                    Debug.LogError("Wrong structure name");
+                    return;
+                }
+            }
+            public static void getStructurePositionRotationScale(string structureName, ref Vector3 pos, ref Vector3 rot, ref Vector3 scale)
+            {
+                UnityMolStructureManager sm = UnityMolMain.getStructureManager();
+                UnityMolStructure s = sm.GetStructure(structureName);
+
+                if (s != null)
+                {
+                    GameObject sgo = sm.structureToGameObject[s.uniqueName];
+                    pos = sgo.transform.localPosition;
+                    rot = sgo.transform.localEulerAngles;
+                    scale = sgo.transform.localScale;
                     return;
                 }
                 else
@@ -6498,6 +6551,7 @@ namespace UMol
                     sl = sm.selections[selName];
                 else
                     sl = sm.getCurrentSelection();
+                selName = sl.name;
                 if (sl.structures.Count != 1)
                 {
                     Debug.LogWarning("Selected atoms not in the same structure.");
@@ -6509,33 +6563,31 @@ namespace UMol
                     Debug.LogWarning("Must select two atoms.");
                     return;
                 }
-                Debug.Log("before");
-                int i = 0;
-                foreach(KeyValuePair<UnityMolAtom,UnityMolAtom[]>p in st.models[0].bonds.bonds)
-                {
-                    foreach(UnityMolAtom atom2 in p.Value)
-                    {
-                        if(atom2!=null)
-                            Debug.Log(i++ + p.Key.name + atom2.name);
-                    }
-                }
+                UnityMolBondBondOrderManager bbom;
                 st.models[0].bonds.Remove(sl.atoms[0], sl.atoms[1]);
-                i = 0;
-                foreach (KeyValuePair<UnityMolAtom, UnityMolAtom[]> p in st.models[0].bonds.bonds)
-                {
-                    foreach (UnityMolAtom atom2 in p.Value)
-                    {
-                        if (atom2 != null)
-                            Debug.Log(i++ + p.Key.name + atom2.name);
-                    }
-                }
-                foreach (UnityMolSelection sli in sm.selections.Values)
-                {
-                   updateRepresentations(sli.name);
-                }
-                UnityMolMain.getCustomRaycast().needsFullUpdate = true;
-                UnityMolMain.getPrecompRepManager().Clear(st.uniqueName);
+                //sl.bonds.Remove(sl.atoms[0], sl.atoms[1]);
+
+                string path = Application.temporaryCachePath;
+                string stName = st.name;
+
+                APIPython.saveToPDB("all("+stName+")", path + String.Format("\\{0}.pdb", stName));
+
+                Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;
+                APIPython.getStructurePositionRotationScale(stName, ref pos, ref rot, ref scale);
+                APIPython.delete(stName);
+                APIPython.load(path + String.Format("\\{0}.pdb", stName));
+                APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
             }
         }
     }
 }
+
+//i = 0;
+//foreach (KeyValuePair<UnityMolAtom, UnityMolAtom[]> p in st.models[0].bonds.bonds)
+//{
+//    foreach (UnityMolAtom atom2 in p.Value)
+//    {
+//        if (atom2 != null)
+//            Debug.Log(i++ + p.Key.name + atom2.name);
+//    }
+//}

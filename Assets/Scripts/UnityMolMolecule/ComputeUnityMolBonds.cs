@@ -323,9 +323,8 @@ public class ComputeUnityMolBonds {
 			UnityMolAtom atom = atoms[i];
 
 			//If we have information in the PDB CONECT field ignore this atom
-			if (atom.isHET && !inParsedConnectivity.Contains(atom)) {
-				otherAtoms.Add(atom);
-				continue;
+			if (atoms[0].residue.chain.model.structure.parsedConnectivity != null) {
+				break;
 			}
 
 

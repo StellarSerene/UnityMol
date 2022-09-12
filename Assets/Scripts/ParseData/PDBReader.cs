@@ -479,13 +479,14 @@ public class PDBReader: Reader {
 
                             Int2 pair;
                             int rootAtom = int.Parse(currentLine.Substring(6, 5));
-                            int bondedA = int.Parse(currentLine.Substring(11, 5));
-
-                            pair.x = rootAtom;
-                            pair.y = bondedA;
-                            bondedAtoms.Add(pair);
-
-
+                            int bondedA;
+                            for(int k = 11; k + 5 < currentLine.Length+1; k+=5)
+                            {
+                                bondedA = int.Parse(currentLine.Substring(k, 5));
+                                pair.x = rootAtom;
+                                pair.y = bondedA;
+                                bondedAtoms.Add(pair);
+                            }
                             Int2 bond;
                             if (currentLine.Length >= 22) {
                                 // Not all atoms are bonded to 1+ others
@@ -581,7 +582,7 @@ public class PDBReader: Reader {
 
             if (!ignoreStructureM) {
                 // newStruct.models[i].bonds = ComputeUnityMolBonds.ComputeBondsSlidingWindow(models[i].allAtoms);
-                newStruct.models[i].bonds = ComputeUnityMolBonds.ComputeBondsByResidue(models[i].allAtoms);
+                    newStruct.models[i].bonds = ComputeUnityMolBonds.ComputeBondsByResidue(models[i].allAtoms);
 
                 newStruct.models[i].ComputeCenterOfGravity();
                 // newStruct.models[i].CenterAtoms();
@@ -649,7 +650,7 @@ public class PDBReader: Reader {
     /// Uses a selection
     /// Ignores secondary structure information
     /// </summary>
-    public static string Write(UnityMolSelection select, bool writeModel = false, bool writeHET = true, bool forceHetAsAtom = false, Vector3[] overridedPos = null, bool writeSS = false) {
+    public static string Write(UnityMolSelection select, bool writeModel = false, bool writeHET = true, bool forceHetAsAtom = false, Vector3[] overridedPos = null, bool writeSS = false, bool writeCONECT = true) {
 
         if (overridedPos != null && select.atoms.Count != overridedPos.Length) {
             Debug.LogError("Size of the overridedPos list does not match the number of atoms in the selections");
@@ -736,6 +737,24 @@ public class PDBReader: Reader {
                 Debug.LogWarning("Cannot write a file with more than 9999 residues. Stopping");
                 break;
             }
+        }
+        if (writeCONECT)
+        {
+            StringBuilder sw2 = new StringBuilder();
+            foreach(UnityMolAtom atom1 in select.bonds.Dbonds.Keys)
+            {
+                sw2.Append("CONECT");
+                sw2.Append(String.Format(" {0,4:D}",atom1.number));
+                for (int i=0;i<27;i++)
+                {
+                    UnityMolAtom atom2 = select.bonds.Dbonds[atom1][i];
+                    if (atom2 == null)
+                        break;
+                    sw2.Append(String.Format(" {0,4:}", atom2.number));
+                }
+                sw2.Append("\n");
+            }
+            sw.Append(sw2);
         }
         if (!writeModel) {
             sw.Append("END\n");
