@@ -153,7 +153,7 @@ public class UnityMolBonds {
 	}
 
 	public void Remove(UnityMolAtom atom, UnityMolAtom bonded=null) {
-	    Debug.Log("Removing "+atom.number+"--"+(bonded==null?-1:bonded.number));
+	    //Debug.Log("Removing "+atom.number+"--"+(bonded==null?-1:bonded.number));
 		UnityMolAtom[] res = null;
 
 		//Removing atom--bonded or atom--all

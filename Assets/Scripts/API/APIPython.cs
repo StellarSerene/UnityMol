@@ -6560,11 +6560,11 @@ namespace UMol
                     return;
                 }
                 UnityMolBonds bonds = st.models[0].bonds;
-                bonds.PrintBonds(sl.atoms[0]);
-                bonds.PrintBonds(sl.atoms[1]);
+                //bonds.PrintBonds(sl.atoms[0]);
+                //bonds.PrintBonds(sl.atoms[1]);
                 bonds.Remove(sl.atoms[0], sl.atoms[1]);
-                bonds.PrintBonds(sl.atoms[0]);
-                bonds.PrintBonds(sl.atoms[1]);
+                //bonds.PrintBonds(sl.atoms[0]);
+                //bonds.PrintBonds(sl.atoms[1]);
 
                 string path = Application.temporaryCachePath;
                 string stName = st.name;
@@ -6576,7 +6576,6 @@ namespace UMol
                 APIPython.delete(stName);
                 APIPython.load(path + String.Format("\\{0}.pdb", stName));
                 APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
-                //updateRepresentations("all(" + stName + ")");
             }
             public static void AddBond(UnityMolSelection sl = null)
             {
@@ -6669,10 +6668,10 @@ namespace UMol
                 UnityMolStructure st = sl.structures[0];
 
                 st.models[0].bonds.Remove(atom);
-                //st.models[0].allAtoms.Remove(atom);
+                st.models[0].allAtoms.Remove(atom);
 
                 string stName = st.name;
-
+                string path = Application.temporaryCachePath;
                 APIPython.saveToPDB("all(" + stName + ")", path + String.Format("\\{0}.pdb", stName));
 
                 Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;

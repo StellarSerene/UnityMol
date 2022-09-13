@@ -720,13 +720,13 @@ public class PDBReader: Reader {
                 if (prevChain != null) {
                     string prevResName = atoms[i - 1].residue.name;
                     int prevResNum = atoms[i - 1].residue.id;
-                    sw.Append(String.Format(terString, atomSerial, prevResName, prevChain, prevResNum, insCode));
+                    sw.Append(String.Format(terString, atom.number, prevResName, prevChain, prevResNum, insCode));
                     atomSerial++;
                 }
                 prevChain = chainId;
             }
 
-            sw.Append(String.Format(CultureInfo.InvariantCulture, pdbString, atomRecordType, atomSerial, atomName.CenterString(4, ' '),
+            sw.Append(String.Format(CultureInfo.InvariantCulture, pdbString, atomRecordType, atom.number, atomName.CenterString(4, ' '),
                                     altLoc, resName, chainId, resNum, insCode, x, y, z,
                                     occupancy, Bfactor, element, charge));
             if (atomSerial > 99999) {
