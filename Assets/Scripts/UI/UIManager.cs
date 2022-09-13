@@ -2571,6 +2571,10 @@ namespace UMol
         {
             APIPython.RemoveBond();
         }
+        public void DelAtom()
+        {
+            APIPython.RemoveAtom();
+        }
 
         void LateUpdate()
         {
