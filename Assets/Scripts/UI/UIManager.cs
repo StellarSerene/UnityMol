@@ -2565,15 +2565,15 @@ namespace UMol
         }
         public void AddBond()
         {
-            APIPython.AddBond();
+            APIPython.refreshStructure(APIPython.AddBond());
         }
         public void DelBond()
         {
-            APIPython.RemoveBond();
+            APIPython.refreshStructure(APIPython.RemoveBond());
         }
         public void DelAtom()
         {
-            APIPython.RemoveAtom();
+            APIPython.refreshStructure(APIPython.RemoveAtom());
         }
 
         void LateUpdate()

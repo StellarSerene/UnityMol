@@ -6512,6 +6512,7 @@ namespace UMol
                 String args = String.Format(" -d");
                 StartOBProcess(args);
             }
+            //Highlight reactional terminals of selection(if null then use current selection). For debugging.
             public static void FindTerminalsOfSelection(string selName=null)
             {
                 UnityMolHighlightManager hm = UnityMolMain.getHighlightManager();
@@ -6542,7 +6543,9 @@ namespace UMol
                     }
                 }
             }
-            public static void RemoveBond(UnityMolSelection sl=null,bool sever=false)
+            //Remove bonds between the two atoms in selection(if null then use current selection)
+            //Require calling refreshStructure afterwards
+            public static string RemoveBond(UnityMolSelection sl=null,bool sever=false)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
                 UnityMolStructureManager tm = UnityMolMain.getStructureManager();
@@ -6551,13 +6554,13 @@ namespace UMol
                 if (sl.structures.Count != 1)
                 {
                     Debug.LogWarning("Selected atoms not in the same structure.");
-                    return;
+                    return "";
                 }
                 UnityMolStructure st = tm.GetStructure(sl.structures[0].name);
                 if (sl.atoms.Count != 2)
                 {
                     Debug.LogWarning("Must select two atoms.");
-                    return;
+                    return "";
                 }
                 UnityMolBonds bonds = st.models[0].bonds;
                 //bonds.PrintBonds(sl.atoms[0]);
@@ -6569,15 +6572,12 @@ namespace UMol
                 string path = Application.temporaryCachePath;
                 string stName = st.name;
 
-                APIPython.saveToPDB("all(" + stName + ")", path + String.Format("\\{0}.pdb", stName));
-
-                Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;
-                APIPython.getStructurePositionRotationScale(stName, ref pos, ref rot, ref scale);
-                APIPython.delete(stName);
-                APIPython.load(path + String.Format("\\{0}.pdb", stName));
-                APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
+                return stName;
+                //refreshStructure(stName);
             }
-            public static void AddBond(UnityMolSelection sl = null)
+            //Add a bond between the two atoms in selection(if null then use current selection)
+            //Require calling refreshStructure afterwards
+            public static string AddBond(UnityMolSelection sl = null)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
                 UnityMolStructureManager tm = UnityMolMain.getStructureManager();
@@ -6586,27 +6586,23 @@ namespace UMol
                 if (sl.structures.Count != 1)
                 {
                     //TODO: merge structure
-                    return;
+                    return null;
                 }
                 UnityMolStructure st = tm.GetStructure(sl.structures[0].name);
                 if (sl.atoms.Count != 2)
                 {
                     Debug.LogWarning("Must select two atoms.");
-                    return;
+                    return null;
                 }
                 st.models[0].bonds.Add(sl.atoms[0], sl.atoms[1]);
 
                 string path = Application.temporaryCachePath;
                 string stName = st.name;
 
-                APIPython.saveToPDB("all(" + stName + ")", path + String.Format("\\{0}.pdb", stName));
-
-                Vector3 pos = Vector3.zero, rot = Vector3.zero, scale = Vector3.zero;
-                APIPython.getStructurePositionRotationScale(stName, ref pos, ref rot, ref scale);
-                APIPython.delete(stName);
-                APIPython.load(path + String.Format("\\{0}.pdb", stName));
-                APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
+                return stName;
+                //refreshStructure(stName);
             }
+            //Check if two atoms are connected
             public static bool isConnected(UnityMolSelection sl=null)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
@@ -6653,24 +6649,37 @@ namespace UMol
                 Debug.Log(rr?"Connected":"Not connected");
                 return rr;
             }
-            public static void RemoveAtom(UnityMolSelection sl=null)
+            
+            //Remove atoms in selection and their bonds
+            //Require calling refreshStructure afterwards
+            public static string RemoveAtom(UnityMolSelection sl = null)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
-                UnityMolStructureManager tm = UnityMolMain.getStructureManager();
                 if (sl == null)
                     sl = sm.getCurrentSelection();
-                if (sl.atoms.Count() != 1)
-                {
-                    Debug.Log("Must select 1 atom.");
-                    return;
-                }
-                UnityMolAtom atom = sl.atoms[0];
+                if (sl.structures.Count > 1)
+                    return null;
                 UnityMolStructure st = sl.structures[0];
 
-                st.models[0].bonds.Remove(atom);
-                st.models[0].allAtoms.Remove(atom);
-
+                foreach(UnityMolAtom atom in sl.atoms)
+                {
+                    st.models[0].bonds.Remove(atom);
+                    st.models[0].allAtoms.Remove(atom);
+                }
                 string stName = st.name;
+                return stName;
+            }
+
+            //Save a structure to PDB file and reload as a temporary solution to solve representation issues after structure editing.
+            //TODO: remove this method and solve representation issues without reloading (hint: check BondRepresentationBondOrder.cs)
+            public static void refreshStructure(string stName=null)
+            {
+                if (stName == null)
+                {
+                    UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
+                    stName = sm.getCurrentSelection().structures[0].name;
+                }
+
                 string path = Application.temporaryCachePath;
                 APIPython.saveToPDB("all(" + stName + ")", path + String.Format("\\{0}.pdb", stName));
 
@@ -6679,6 +6688,37 @@ namespace UMol
                 APIPython.delete(stName);
                 APIPython.load(path + String.Format("\\{0}.pdb", stName));
                 APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
+            }
+            //selection contain atom1 and atom2
+            //if atom1 and atom2 are in different structures, merge them using APIPython.mergeStructure
+            //find reactional residues (-NH2 or -COOH) closest to atom1 and atom2 respectively. Name them r1 and r2.
+            //Perform Dehydrational synthesis reaction between r1 and r2 using AddBond to addBond and RemoveAtom to clear up rebundant atoms.
+            public static void synthesis(UnityMolSelection sl)
+            {
+                UnityMolStructureManager stm = UnityMolMain.getStructureManager();
+                if (sl.atoms.Count != 2)
+                {
+                    Debug.Log("Must select 2 atoms");
+                    return;
+                }
+                UnityMolAtom a1=sl.atoms[0], a2=sl.atoms[1];
+                if (sl.structures.Count == 2)
+                {
+                    mergeStructure(sl.structures[0].name, sl.structures[1].name);
+                }
+            }
+            // TODO: Find a Rotation Vector Farthest away from existing bonded atoms as initial input to further minimization
+            // Used in AddAtom and synthesis
+            public static Vector3 findFarthestRotation(Vector3 atom,Vector3[] bonded)
+            {
+                Vector3 result = Vector3.zero;
+                return result;
+            }
+            //TODO
+            //Require calling refreshStructure afterwards
+            public static string addAtom(UnityMolStructure st, UnityMolAtom atom)
+            {
+                return st.name;
             }
         }
     }
