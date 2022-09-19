@@ -547,14 +547,12 @@ namespace UMol
 
                                 Int2 pair;
                                 int rootAtom = int.Parse(currentLine.Substring(6, 5));
-                                int bondedA;
-                                for (int k = 11; k + 5 < currentLine.Length + 1; k += 5)
-                                {
-                                    bondedA = int.Parse(currentLine.Substring(k, 5));
-                                    pair.x = rootAtom;
-                                    pair.y = bondedA;
-                                    bondedAtoms.Add(pair);
-                                }
+                                int bondedA = int.Parse(currentLine.Substring(11, 5));
+
+                                pair.x = rootAtom;
+                                pair.y = bondedA;
+                                bondedAtoms.Add(pair);
+
                                 Int2 bond;
                                 if (currentLine.Length >= 22)
                                 {
