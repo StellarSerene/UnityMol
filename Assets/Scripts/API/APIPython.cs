@@ -6420,25 +6420,30 @@ namespace UMol
                 UnityMolMain.recordPythonCommand("clearAnnotations()");
                 UnityMolMain.recordUndoPythonCommand("");
             }
-            
+
             private static ReadSaveFilesWithBrowser getReadSaveFilesWithBrowser()
             {
                 return GameObject.FindObjectOfType<ReadSaveFilesWithBrowser>().GetComponent<ReadSaveFilesWithBrowser>();
             }
+
             private static string getinitPath()
             {
                 return getReadSaveFilesWithBrowser().initPath;
             }
+
             private static void setinitPath(string path)
             {
-                getReadSaveFilesWithBrowser().initPath=path;
+                getReadSaveFilesWithBrowser().initPath = path;
             }
+
             private static string getCurrentSelectionName()
             {
                 return UnityMolMain.getSelectionManager().getCurrentSelection().name;
             }
+
             private static int pid_NAMD;
-            public static void StartNAMD(string path=null)
+
+            public static void StartNAMD(string path = null)
             {
                 ReadSaveFilesWithBrowser rsfwb = getReadSaveFilesWithBrowser();
                 if (path == null)//not returned from VR coroutine
@@ -6447,11 +6452,12 @@ namespace UMol
                     return;//wait for coroutine to return
                 pid_NAMD = StartProcess("namd2", path).Id;
                 string selName = getCurrentSelectionName();
-                int port=2030;
+                int port = 2030;
                 //TO DO:read port from conf
                 System.Threading.Thread.Sleep(100);
                 API.APIPython.connectIMD(APIPython.last().uniqueName, "127.0.0.1", port);
             }
+
             public static void StopNAMD()
             {
                 APIPython.disconnectIMD(APIPython.last().uniqueName);
@@ -6459,6 +6465,7 @@ namespace UMol
                 pro.Kill();
                 pro.WaitForExit();
             }
+
             public static void saveSelectionToPDB(string path = null)
             {
                 string selName = getCurrentSelectionName();
@@ -6470,6 +6477,7 @@ namespace UMol
                 setinitPath(path);
                 saveToPDB(selName, path, false);
             }
+
             private static System.Diagnostics.Process StartProcess(string fname, string args)
             {
                 System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(fname, args);
@@ -6478,6 +6486,7 @@ namespace UMol
                 psi.RedirectStandardOutput = true;
                 return System.Diagnostics.Process.Start(psi);
             }
+
             private static void StartOBProcess(string args)
             {
                 UnityMolSelectionManager slm = UnityMolMain.getSelectionManager();
@@ -6485,10 +6494,10 @@ namespace UMol
                 string stName = st.name;
                 string path = Application.temporaryCachePath;
                 args = String.Format("\"{0}\\{1}_in.pdb\" -O \"{0}\\{1}.pdb\"", path, stName) + args;
-                
+
                 string selName = getCurrentSelectionName();
-                APIPython.saveToPDB(selName, path + String.Format("\\{0}_in.pdb",stName));
-                System.Diagnostics.Process p = StartProcess("obabel",args);
+                APIPython.saveToPDB(selName, path + String.Format("\\{0}_in.pdb", stName));
+                System.Diagnostics.Process p = StartProcess("obabel", args);
                 p.WaitForExit();
 
                 Vector3 pos = Vector3.zero, rot = Vector3.zero;
@@ -6497,23 +6506,27 @@ namespace UMol
                 APIPython.load(path + String.Format("\\{0}.pdb", stName));
                 APIPython.setStructurePositionRotation(stName, pos, rot);
             }
+
             public static void Minimization(int steps)
             {
-                String args = String.Format(" --minimize --step {0}",steps);
+                String args = String.Format(" --minimize --step {0}", steps);
                 StartOBProcess(args);
             }
+
             public static void AddH()
             {
                 String args = String.Format(" -h");
                 StartOBProcess(args);
             }
+
             public static void DelH()
             {
                 String args = String.Format(" -d");
                 StartOBProcess(args);
             }
+
             //Highlight reactional terminals of selection(if null then use current selection). For debugging.
-            public static void FindTerminalsOfSelection(string selName=null)
+            public static void FindTerminalsOfSelection(string selName = null)
             {
                 UnityMolHighlightManager hm = UnityMolMain.getHighlightManager();
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
@@ -6528,8 +6541,8 @@ namespace UMol
                     foreach (KeyValuePair<String, UnityMolChain> p in st.currentModel.chains)
                     {
                         int count = p.Value.residues.Count;
-                        
-                        UnityMolResidue r1= p.Value.residues[1], r2;//two terminal residues
+
+                        UnityMolResidue r1 = p.Value.residues[1], r2;//two terminal residues
                         List<UnityMolAtom> atoms = new List<UnityMolAtom>(200);
                         atoms.AddRange(r1.allAtoms);
                         if (count != 1)
@@ -6543,9 +6556,10 @@ namespace UMol
                     }
                 }
             }
+
             //Remove bonds between the two atoms in selection(if null then use current selection)
             //Require calling refreshStructure afterwards
-            public static string RemoveBond(UnityMolSelection sl=null,bool sever=false)
+            public static string RemoveBond(UnityMolSelection sl = null, bool sever = false)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
                 UnityMolStructureManager tm = UnityMolMain.getStructureManager();
@@ -6575,6 +6589,7 @@ namespace UMol
                 return stName;
                 //refreshStructure(stName);
             }
+
             //Add a bond between the two atoms in selection(if null then use current selection)
             //Require calling refreshStructure afterwards
             public static string AddBond(UnityMolSelection sl = null)
@@ -6602,8 +6617,9 @@ namespace UMol
                 return stName;
                 //refreshStructure(stName);
             }
+
             //Check if two atoms are connected
-            public static bool isConnected(UnityMolSelection sl=null)
+            public static bool isConnected(UnityMolSelection sl = null)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
                 UnityMolStructureManager tm = UnityMolMain.getStructureManager();
@@ -6620,8 +6636,8 @@ namespace UMol
                     Debug.LogWarning("Must select two atoms.");
                     return false;
                 }
-                UnityMolAtom a1 = sl.atoms[0],a2 = sl.atoms[1];
-                HashSet<UnityMolAtom> v= new HashSet<UnityMolAtom>();
+                UnityMolAtom a1 = sl.atoms[0], a2 = sl.atoms[1];
+                HashSet<UnityMolAtom> v = new HashSet<UnityMolAtom>();
                 v.Add(a1);
                 bool dfs(UnityMolAtom a)
                 {
@@ -6629,10 +6645,10 @@ namespace UMol
                     {
                         return true;
                     }
-                    bool r=false;
+                    bool r = false;
                     //foreach(UnityMolAtom bonded in sl.bonds.bondsDual[a])
-                    Dictionary<UnityMolAtom,UnityMolAtom[]> connectivity = sl.structures[0].models[0].bonds.bondsDual;
-                    for (int i=0;i< connectivity[a].Count();i++)
+                    Dictionary<UnityMolAtom, UnityMolAtom[]> connectivity = sl.structures[0].models[0].bonds.bondsDual;
+                    for (int i = 0; i < connectivity[a].Count(); i++)
                     {
                         UnityMolAtom bonded = connectivity[a][i];
                         if (bonded == null)
@@ -6645,11 +6661,11 @@ namespace UMol
                     }
                     return r;
                 }
-                bool rr=dfs(a1);
-                Debug.Log(rr?"Connected":"Not connected");
+                bool rr = dfs(a1);
+                Debug.Log(rr ? "Connected" : "Not connected");
                 return rr;
             }
-            
+
             //Remove atoms in selection and their bonds
             //Require calling refreshStructure afterwards
             public static string RemoveAtom(UnityMolSelection sl = null)
@@ -6661,7 +6677,7 @@ namespace UMol
                     return null;
                 UnityMolStructure st = sl.structures[0];
 
-                foreach(UnityMolAtom atom in sl.atoms)
+                foreach (UnityMolAtom atom in sl.atoms)
                 {
                     st.models[0].bonds.Remove(atom);
                     st.models[0].allAtoms.Remove(atom);
@@ -6672,7 +6688,7 @@ namespace UMol
 
             //Save a structure to PDB file and reload as a temporary solution to solve representation issues after structure editing.
             //TODO: remove this method and solve representation issues without reloading (hint: check BondRepresentationBondOrder.cs)
-            public static void refreshStructure(string stName=null)
+            public static void refreshStructure(string stName = null)
             {
                 if (stName == null)
                 {
@@ -6689,6 +6705,7 @@ namespace UMol
                 APIPython.load(path + String.Format("\\{0}.pdb", stName));
                 APIPython.setStructurePositionRotationScale(stName, pos, rot, scale);
             }
+
             //selection contain atom1 and atom2
             //if atom1 and atom2 are in different structures, merge them using APIPython.mergeStructure
             //find reactional residues (-NH2 or -COOH) closest to atom1 and atom2 respectively. Name them r1 and r2.
@@ -6701,19 +6718,21 @@ namespace UMol
                     Debug.Log("Must select 2 atoms");
                     return;
                 }
-                UnityMolAtom a1=sl.atoms[0], a2=sl.atoms[1];
+                UnityMolAtom a1 = sl.atoms[0], a2 = sl.atoms[1];
                 if (sl.structures.Count == 2)
                 {
                     mergeStructure(sl.structures[0].name, sl.structures[1].name);
                 }
             }
+
             // TODO: Find a Rotation Vector Farthest away from existing bonded atoms as initial input to further minimization
             // Used in AddAtom and synthesis
-            public static Vector3 findFarthestRotation(Vector3 atom,Vector3[] bonded)
+            public static Vector3 findFarthestRotation(Vector3 atom, Vector3[] bonded)
             {
                 Vector3 result = Vector3.zero;
                 return result;
             }
+
             //TODO
             //Require calling refreshStructure afterwards
             public static string addAtom(UnityMolStructure st, UnityMolAtom atom)
