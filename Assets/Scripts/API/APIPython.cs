@@ -6601,6 +6601,7 @@ namespace UMol
                 if (sl.structures.Count != 1)
                 {
                     //TODO: merge structure
+                    Debug.LogWarning("Unimplemented");
                     return null;
                 }
                 UnityMolStructure st = tm.GetStructure(sl.structures[0].name);
