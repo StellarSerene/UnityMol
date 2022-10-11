@@ -554,7 +554,7 @@ namespace UMol
                                 bondedAtoms.Add(pair);
 
                                 Int2 bond;
-                                if (currentLine.Length >= 22)
+                                if (currentLine.Length >= 21)
                                 {
                                     // Not all atoms are bonded to 1+ others
                                     string bondedB = currentLine.Substring(16, 5).Trim();
@@ -566,7 +566,7 @@ namespace UMol
                                         bondedAtoms.Add(bond);
                                     }
                                 }
-                                if (currentLine.Length >= 27)
+                                if (currentLine.Length >= 26)
                                 {
                                     string bondedC = currentLine.Substring(21, 5).Trim();
                                     if (bondedC != "")
@@ -577,7 +577,7 @@ namespace UMol
                                         bondedAtoms.Add(bond);
                                     }
                                 }
-                                if (currentLine.Length >= 32)
+                                if (currentLine.Length >= 31)
                                 {
                                     string bondedD = currentLine.Substring(26, 5).Trim();
                                     if (bondedD != "")
@@ -846,13 +846,13 @@ namespace UMol
             if (writeCONECT)
             {
                 StringBuilder sw2 = new StringBuilder();
-                foreach (UnityMolAtom atom1 in select.bonds.Dbonds.Keys)
+                foreach (UnityMolAtom atom1 in select.bonds.DbondsDual.Keys)
                 {
                     sw2.Append("CONECT");
                     sw2.Append(String.Format(" {0,4:D}", atom1.number));
                     for (int i = 0; i < 27; i++)
                     {
-                        UnityMolAtom atom2 = select.bonds.Dbonds[atom1][i];
+                        UnityMolAtom atom2 = select.bonds.DbondsDual[atom1][i];
                         if (atom2 == null)
                             break;
                         sw2.Append(String.Format(" {0,4:}", atom2.number));
