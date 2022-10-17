@@ -123,6 +123,11 @@ namespace UMol
             }
         }
 
+        public void readFilesFromPath(string path = null, bool readHetm = true)
+        {
+            loadFileFromPath(path, readHetm);
+        }
+
         public void saveState()
         {
             string path = stateToRead(initPath);

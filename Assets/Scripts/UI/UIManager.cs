@@ -2573,7 +2573,20 @@ namespace UMol
         }
         public void DelAtom()
         {
-            APIPython.refreshStructure(APIPython.RemoveAtom());
+            string stName = APIPython.RemoveAtom();
+            UnityMolStructureManager sm = UnityMolMain.getStructureManager();
+            UnityMolStructure st = sm.GetStructure(stName);
+            if (st.Count != 0)
+            {
+                APIPython.refreshStructure(stName);
+            }else
+            {
+                APIPython.delete(stName);
+            }
+        }
+        public void AddAtom(Text t)
+        {
+            APIPython.AddAtom(t.text);
         }
 
         void LateUpdate()

@@ -48,6 +48,7 @@
 
 
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6525,6 +6526,27 @@ namespace UMol
                 StartOBProcess(args);
             }
 
+            public static void AddAtom(string atomName = null)
+            {
+                if (atomName == null)
+                    return;
+                bool readHTM = true;
+                try
+                {
+                    readHTM = GameObject.Find("Toggle heteroAtm").GetComponent<Toggle>().isOn;
+                }
+                catch
+                {
+                }
+                string path = "Assets/Resources/AtomPdb/" + atomName + ".pdb";
+                if (!System.IO.File.Exists(path))
+                {
+                    Debug.LogWarning("Not exists this atom.");
+                }
+                ReadSaveFilesWithBrowser rsfwb = new ReadSaveFilesWithBrowser();
+                rsfwb.readFilesFromPath(path, readHTM);
+            }
+
             //Highlight reactional terminals of selection(if null then use current selection). For debugging.
             public static void FindTerminalsOfSelection(string selName = null)
             {
@@ -6736,10 +6758,10 @@ namespace UMol
 
             //TODO
             //Require calling refreshStructure afterwards
-            public static string addAtom(UnityMolStructure st, UnityMolAtom atom)
-            {
-                return st.name;
-            }
+            //public static string addAtom(UnityMolStructure st, UnityMolAtom atom)
+            //{
+            //    return st.name;
+            //}
         }
     }
 }
