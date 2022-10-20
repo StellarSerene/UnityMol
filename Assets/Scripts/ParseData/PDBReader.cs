@@ -766,6 +766,16 @@ namespace UMol
             int atomSerial = 0;
 
             List<UnityMolAtom> atoms = select.atoms;
+            atoms.Sort((UnityMolAtom a, UnityMolAtom b) =>
+            {
+                if (a.residue.chain.name == b.residue.chain.name)
+                {
+                    return a.number.CompareTo(b.number);
+                }
+                return a.residue.chain.name.CompareTo(b.residue.chain.name);
+            });
+
+            var outputSerial = new Dictionary<UnityMolAtom, int>();
 
             if (writeModel)
             {
@@ -791,6 +801,7 @@ namespace UMol
                 }
 
                 atomSerial++;
+
                 string atomName = atom.name.Substring(0, Mathf.Min(4, atom.name.Length));
                 atomName = formatAtomName(atomName);
                 string altLoc = " "; // We do not store it yet.
@@ -823,13 +834,15 @@ namespace UMol
                     {
                         string prevResName = atoms[i - 1].residue.name;
                         int prevResNum = atoms[i - 1].residue.id;
-                        sw.Append(String.Format(terString, atom.number, prevResName, prevChain, prevResNum, insCode));
+                        sw.Append(String.Format(terString, atomSerial, prevResName, prevChain, prevResNum, insCode));
                         atomSerial++;
                     }
                     prevChain = chainId;
                 }
 
-                sw.Append(String.Format(CultureInfo.InvariantCulture, pdbString, atomRecordType, atom.number, atomName.CenterString(4, ' '),
+                outputSerial[atom] = atomSerial;
+
+                sw.Append(String.Format(CultureInfo.InvariantCulture, pdbString, atomRecordType, atomSerial, atomName.CenterString(4, ' '),
                                         altLoc, resName, chainId, resNum, insCode, x, y, z,
                                         occupancy, Bfactor, element, charge));
                 if (atomSerial > 99999)
@@ -849,13 +862,13 @@ namespace UMol
                 foreach (UnityMolAtom atom1 in select.bonds.DbondsDual.Keys)
                 {
                     sw2.Append("CONECT");
-                    sw2.Append(String.Format(" {0,4:D}", atom1.number));
+                    sw2.Append(String.Format(" {0,4:D}", outputSerial[atom1]));
                     for (int i = 0; i < 27; i++)
                     {
                         UnityMolAtom atom2 = select.bonds.DbondsDual[atom1][i];
                         if (atom2 == null)
                             break;
-                        sw2.Append(String.Format(" {0,4:}", atom2.number));
+                        sw2.Append(String.Format(" {0,4:}", outputSerial[atom2]));
                     }
                     sw2.Append("\n");
                 }

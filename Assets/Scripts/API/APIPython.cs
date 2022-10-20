@@ -6612,33 +6612,28 @@ namespace UMol
                 //refreshStructure(stName);
             }
 
-            //Add a bond between the two atoms in selection(if null then use current selection)
-            //Require calling refreshStructure afterwards
-            public static string AddBond(UnityMolSelection sl = null)
+            // Add a bond between the two atoms in selection(if null then use current selection)
+            // Require calling refreshStructure afterwards
+            public static string AddBond(UnityMolSelection sel = null)
             {
-                UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
-                UnityMolStructureManager tm = UnityMolMain.getStructureManager();
-                if (sl == null)
-                    sl = sm.getCurrentSelection();
-                if (sl.structures.Count != 1)
+                if (sel == null)
                 {
-                    //TODO: merge structure
-                    Debug.LogWarning("Unimplemented");
-                    return null;
+                    UnityMolSelectionManager selectionManager = UnityMolMain.getSelectionManager();
+                    sel = selectionManager.getCurrentSelection();
                 }
-                UnityMolStructure st = tm.GetStructure(sl.structures[0].name);
-                if (sl.atoms.Count != 2)
+                if (sel.atoms.Count != 2)
                 {
                     Debug.LogWarning("Must select two atoms.");
                     return null;
                 }
-                st.models[0].bonds.Add(sl.atoms[0], sl.atoms[1]);
-
-                string path = Application.temporaryCachePath;
-                string stName = st.name;
-
-                return stName;
-                //refreshStructure(stName);
+                if (sel.structures.Count != 1)
+                {
+                    mergeStructure(sel.structures[0].name, sel.structures[1].name);
+                }
+                UnityMolStructureManager structureManager = UnityMolMain.getStructureManager();
+                UnityMolStructure structure = structureManager.GetStructure(sel.structures[0].name);
+                structure.models[0].bonds.Add(sel.atoms[0], sel.atoms[1]);
+                return structure.name;
             }
 
             //Check if two atoms are connected

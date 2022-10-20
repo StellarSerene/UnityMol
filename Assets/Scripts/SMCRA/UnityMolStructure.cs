@@ -849,6 +849,8 @@ public class UnityMolStructure {
 	/// </summary>
 	public void MergeStructure(UnityMolStructure tobeMerged, string newChainName) {
 
+		int atomCountBeforeMerge = Count;
+		// TODO use max atom number instead of count
 		UnityMolChain[] chains = tobeMerged.currentModel.chains.Values.ToArray();
 		foreach (UnityMolChain c in chains) {
 			string chainName = newChainName;
@@ -866,6 +868,8 @@ public class UnityMolStructure {
 				foreach (UnityMolAtom a in r.atoms.Values) {
 					a.idInAllAtoms = currentModel.allAtoms.Count;
 					currentModel.allAtoms.Add(a);
+					a.residue.chain.model.structure = this;
+					a.number += atomCountBeforeMerge;
 				}
 			}
 		}
@@ -882,7 +886,6 @@ public class UnityMolStructure {
 		currentModel.ComputeCenterOfGravity();
 		currentModel.fillIdAtoms();
 
-
 		//Need to create colliders for newly added atoms
 		Reader.CreateColliders(new UnityMolSelection(tobeMerged.currentModel.allAtoms, newBonds: null, ToSelectionName(), uniqueName));
 
@@ -890,6 +893,9 @@ public class UnityMolStructure {
 
 		UnityMolMain.getCustomRaycast().needsFullUpdate = true;
 		UnityMolMain.getPrecompRepManager().Clear(uniqueName);
+
+		// Update atomGos
+		atomGos = atomToGo.Values.ToArray();
 	}
 	private string findNewChainName(string name) {
 		string result = name;
