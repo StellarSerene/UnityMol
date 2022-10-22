@@ -2507,6 +2507,7 @@ namespace UMol
                 Debug.LogWarning("Please enter IP address and port");
             }
         }
+
         public void disconnectIMD()
         {
             APIPython.disconnectIMD(APIPython.last().uniqueName);
@@ -2516,32 +2517,39 @@ namespace UMol
         {
             APIPython.showAs("s");
         }
+
         public void saveSelectionToPDB()
         {
             APIPython.saveSelectionToPDB();
         }
+
         public void showCartoon()
         {
             APIPython.showAs("c");
         }
+
         public void showHB()
         {
             APIPython.showAs("hb");
             APIPython.setHyperBallMetaphore("Smooth");
         }
+
         public void showVDW()
         {
             APIPython.showAs("hb");
             APIPython.setHyperBallMetaphore("VdW");
         }
+
         public void StartNAMD()
         {
             APIPython.StartNAMD();
         }
+
         public void StopNAMD()
         {
             APIPython.StopNAMD();
         }
+
         public void wrapperMin(Text t)
         {
             if (t.text == "")
@@ -2551,39 +2559,43 @@ namespace UMol
             }
             Minimization(int.Parse(t.text));
         }
+
         public void Minimization(int steps)
         {
             APIPython.Minimization(steps);
         }
+
         public void AddH()
         {
             APIPython.AddH();
         }
+
         public void DelH()
         {
             APIPython.DelH();
         }
+
         public void AddBond()
         {
-            APIPython.refreshStructure(APIPython.AddBond());
+            APIPython.AddBond();
         }
+
         public void DelBond()
         {
-            APIPython.refreshStructure(APIPython.RemoveBond());
+            APIPython.RemoveBond();
         }
+
         public void DelAtom()
         {
             string stName = APIPython.RemoveAtom();
             UnityMolStructureManager sm = UnityMolMain.getStructureManager();
             UnityMolStructure st = sm.GetStructure(stName);
-            if (st.Count != 0)
-            {
-                APIPython.refreshStructure(stName);
-            }else
+            if (st.Count == 0)
             {
                 APIPython.delete(stName);
             }
         }
+
         public void AddAtom(Text t)
         {
             APIPython.AddAtom(t.text);

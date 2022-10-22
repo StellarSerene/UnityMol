@@ -6579,8 +6579,7 @@ namespace UMol
                 }
             }
 
-            //Remove bonds between the two atoms in selection(if null then use current selection)
-            //Require calling refreshStructure afterwards
+            // Remove bonds between the two atoms in selection(if null then use current selection)
             public static string RemoveBond(UnityMolSelection sl = null, bool sever = false)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
@@ -6599,21 +6598,14 @@ namespace UMol
                     return "";
                 }
                 UnityMolBonds bonds = st.models[0].bonds;
-                //bonds.PrintBonds(sl.atoms[0]);
-                //bonds.PrintBonds(sl.atoms[1]);
                 bonds.Remove(sl.atoms[0], sl.atoms[1]);
-                //bonds.PrintBonds(sl.atoms[0]);
-                //bonds.PrintBonds(sl.atoms[1]);
 
-                string path = Application.temporaryCachePath;
-                string stName = st.name;
+                st.updateRepresentations(trajectory: false);
 
-                return stName;
-                //refreshStructure(stName);
+                return st.name;
             }
 
             // Add a bond between the two atoms in selection(if null then use current selection)
-            // Require calling refreshStructure afterwards
             public static string AddBond(UnityMolSelection sel = null)
             {
                 if (sel == null)
@@ -6633,6 +6625,9 @@ namespace UMol
                 UnityMolStructureManager structureManager = UnityMolMain.getStructureManager();
                 UnityMolStructure structure = structureManager.GetStructure(sel.structures[0].name);
                 structure.models[0].bonds.Add(sel.atoms[0], sel.atoms[1]);
+
+                structure.updateRepresentations(trajectory: false);
+
                 return structure.name;
             }
 
@@ -6684,8 +6679,7 @@ namespace UMol
                 return rr;
             }
 
-            //Remove atoms in selection and their bonds
-            //Require calling refreshStructure afterwards
+            // Remove atoms in selection and their bonds
             public static string RemoveAtom(UnityMolSelection sl = null)
             {
                 UnityMolSelectionManager sm = UnityMolMain.getSelectionManager();
@@ -6700,8 +6694,10 @@ namespace UMol
                     st.models[0].bonds.Remove(atom);
                     st.models[0].allAtoms.Remove(atom);
                 }
-                string stName = st.name;
-                return stName;
+
+                st.updateRepresentations(trajectory: false);
+
+                return st.name;
             }
 
             //Save a structure to PDB file and reload as a temporary solution to solve representation issues after structure editing.
