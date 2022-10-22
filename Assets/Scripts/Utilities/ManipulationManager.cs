@@ -56,404 +56,538 @@ using System;
 using UnityEngine.EventSystems;
 using System.Linq;
 
-namespace UMol {
+namespace UMol
+{
 
-public class ManipulationManager : MonoBehaviour {
+    public class ManipulationManager : MonoBehaviour
+    {
 
-    public Transform currentTransform;
+        public Transform currentTransform;
 
-    public float moveSpeed = 5.0f;
-    public float scrollSpeed = 5.0f;
+        public float moveSpeed = 5.0f;
+        public float scrollSpeed = 5.0f;
 
-    public float speedX = 1.0f;
-    public float speedY = 1.0f;
-    public float speedZ = 1.0f;
+        public float speedX = 1.0f;
+        public float speedY = 1.0f;
+        public float speedZ = 1.0f;
 
-    public bool rotateX = false;
-    public bool rotateY = false;
-    public bool rotateZ = false;
+        public bool rotateX = false;
+        public bool rotateY = false;
+        public bool rotateZ = false;
 
-    public Vector3 currentCenterPosition = Vector3.zero;
+        public Vector3 currentCenterPosition = Vector3.zero;
 
-    public bool disableMouseInVR = true;
+        public bool disableMouseInVR = true;
 
-    private Transform loadedMolPar;
-    private MouseOverSelection mouseSel;
+        public Toggle moveOnlySelectedToggle;
 
-    void Start() {
-        mouseSel = GetComponent<MouseOverSelection>();
-    }
+        private Transform loadedMolPar;
+        private MouseOverSelection mouseSel;
 
-
-    public void resetPosition() {
-        currentTransform.position = Vector3.zero;
-        UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-    }
-    public void resetRotation() {
-        currentTransform.rotation = Quaternion.identity;
-        UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-    }
-    public void setSelectedOject(Transform seleT) {
-        currentTransform = seleT;
-    }
-
-    public void centerOnStructure(UnityMolStructure s, bool lerp) {
-
-        if (lerp) {
-            centerOnStructureLerp(s);
+        void Start()
+        {
+            mouseSel = GetComponent<MouseOverSelection>();
         }
-        else {
+
+
+        public void resetPosition()
+        {
+            currentTransform.position = Vector3.zero;
+            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+        }
+        public void resetRotation()
+        {
+            currentTransform.rotation = Quaternion.identity;
+            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+        }
+        public void setSelectedOject(Transform seleT)
+        {
+            currentTransform = seleT;
+        }
+
+        public void centerOnStructure(UnityMolStructure s, bool lerp)
+        {
+
+            if (lerp)
+            {
+                centerOnStructureLerp(s);
+            }
+            else
+            {
+                Transform tpar = UnityMolMain.getRepresentationParent().transform;
+                Vector3 bary = s.currentModel.centerOfGravity;
+                Transform molPar = tpar.Find(s.ToSelectionName());
+                Vector3 worldBary = molPar.TransformPoint(bary);
+                if (!UnityMolMain.inVR())
+                {
+                    tpar.Translate(-worldBary, Space.World);
+                    setRotationCenter(molPar.TransformPoint(bary));
+                }
+                else
+                {
+                    tpar.Translate(-worldBary, Space.World);
+
+                    Transform head = VRTK.VRTK_DeviceFinder.HeadsetCamera();
+
+                    if (head != null)
+                    {
+                        Vector3 targetPos = head.position + head.forward;
+                        tpar.Translate(targetPos, Space.World);
+                    }
+                    setRotationCenter(molPar.TransformPoint(bary));
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+        }
+
+        public void centerOnStructureLerp(UnityMolStructure s)
+        {
             Transform tpar = UnityMolMain.getRepresentationParent().transform;
             Vector3 bary = s.currentModel.centerOfGravity;
             Transform molPar = tpar.Find(s.ToSelectionName());
-            Vector3 worldBary = molPar.TransformPoint(bary);
-            if (!UnityMolMain.inVR()) {
-                tpar.Translate(-worldBary, Space.World);
-                setRotationCenter(molPar.TransformPoint(bary));
-            }
-            else {
-                tpar.Translate(-worldBary, Space.World);
-
-                Transform head = VRTK.VRTK_DeviceFinder.HeadsetCamera();
-
-                if (head != null) {
-                    Vector3 targetPos = head.position + head.forward;
-                    tpar.Translate(targetPos, Space.World);
-                }
-                setRotationCenter(molPar.TransformPoint(bary));
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            StartCoroutine(delayedCenterOnStructure(tpar, bary, molPar));
         }
-    }
-
-    public void centerOnStructureLerp(UnityMolStructure s) {
-        Transform tpar = UnityMolMain.getRepresentationParent().transform;
-        Vector3 bary = s.currentModel.centerOfGravity;
-        Transform molPar = tpar.Find(s.ToSelectionName());
-        StartCoroutine(delayedCenterOnStructure(tpar, bary, molPar));
-    }
-    public void setRotationCenter(Vector3 pos) {
-        currentCenterPosition = pos;
-    }
-
-    IEnumerator delayedCenterOnStructure(Transform tpar, Vector3 bary, Transform molPar) {
-        //End of frame
-        yield return 0;
-
-
-
-        Vector3 worldBary = molPar.TransformPoint(bary);
-
-        Vector3 savedPos = tpar.position;
-        tpar.Translate(-worldBary, Space.World);
-
-
-        if (UnityMolMain.inVR()) {
-            Transform head = VRTK.VRTK_DeviceFinder.HeadsetCamera();
-            if (head != null) {
-                Vector3 headTarget = head.position + head.forward;
-                tpar.Translate(headTarget, Space.World);
-            }
+        public void setRotationCenter(Vector3 pos)
+        {
+            currentCenterPosition = pos;
         }
 
-        Vector3 targetPos = tpar.position;
-        tpar.position = savedPos;
-
-        int steps = 200;
-        for (int i = 1; i < steps / 4; i++) {
-            float tt = i / (float)steps;
-            tpar.position = Vector3.Lerp(tpar.position, targetPos, tt);
+        IEnumerator delayedCenterOnStructure(Transform tpar, Vector3 bary, Transform molPar)
+        {
+            //End of frame
             yield return 0;
+
+
+
+            Vector3 worldBary = molPar.TransformPoint(bary);
+
+            Vector3 savedPos = tpar.position;
+            tpar.Translate(-worldBary, Space.World);
+
+
+            if (UnityMolMain.inVR())
+            {
+                Transform head = VRTK.VRTK_DeviceFinder.HeadsetCamera();
+                if (head != null)
+                {
+                    Vector3 headTarget = head.position + head.forward;
+                    tpar.Translate(headTarget, Space.World);
+                }
+            }
+
+            Vector3 targetPos = tpar.position;
+            tpar.position = savedPos;
+
+            int steps = 200;
+            for (int i = 1; i < steps / 4; i++)
+            {
+                float tt = i / (float)steps;
+                tpar.position = Vector3.Lerp(tpar.position, targetPos, tt);
+                yield return 0;
+            }
+
+            setRotationCenter(molPar.TransformPoint(bary));
+
+            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+
         }
 
-        setRotationCenter(molPar.TransformPoint(bary));
 
-        UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+        //Center on selection
+        public void centerOnSelection(UnityMolSelection sel, bool lerp, float distance = -1.0f)
+        {
 
-    }
+            if (lerp)
+            {
+                centerOnSelectionLerp(sel, distance);
+            }
+            else
+            {
+                Transform tpar = UnityMolMain.getRepresentationParent().transform;
+                Vector3 bary = computeCenterOfGravitySel(sel);
+                Transform molPar = getSelectionParent(tpar, sel);
+                Vector3 worldBary = molPar.TransformPoint(bary);
+                if (!UnityMolMain.inVR())
+                {
+                    tpar.Translate(-worldBary, Space.World);
+                    if (distance > 0.0f)
+                    {
+                        float dist = Vector3.Distance(transform.position, tpar.position);
+                        tpar.Translate(new Vector3(0.0f, 0.0f, -dist + distance), Space.World);
+                    }
 
+                    // tpar.Translate(new Vector3(0.0f, 0.0f, -distance) , Space.World);
+                    setRotationCenter(molPar.TransformPoint(bary));
+                }
+                else
+                {
+                    tpar.Translate(-worldBary, Space.World);
 
-    //Center on selection
-    public void centerOnSelection(UnityMolSelection sel, bool lerp, float distance = -1.0f) {
+                    Transform head = VRTK.VRTK_DeviceFinder.HeadsetCamera();
 
-        if (lerp) {
-            centerOnSelectionLerp(sel, distance);
+                    if (head != null)
+                    {
+                        Vector3 targetPos = head.position + (head.forward * distance);
+                        tpar.Translate(targetPos, Space.World);
+                    }
+                    setRotationCenter(molPar.TransformPoint(bary));
+                    UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                }
+
+            }
         }
-        else {
+
+        public void centerOnSelectionLerp(UnityMolSelection sel, float distance)
+        {
             Transform tpar = UnityMolMain.getRepresentationParent().transform;
             Vector3 bary = computeCenterOfGravitySel(sel);
             Transform molPar = getSelectionParent(tpar, sel);
+            StartCoroutine(delayedCenterOnSelection(tpar, bary, molPar, distance));
+        }
+
+        IEnumerator delayedCenterOnSelection(Transform tpar, Vector3 bary, Transform molPar, float distance)
+        {
+            //End of frame
+            yield return 0;
+
             Vector3 worldBary = molPar.TransformPoint(bary);
-            if (!UnityMolMain.inVR()) {
-                tpar.Translate(-worldBary, Space.World);
-                if (distance > 0.0f) {
-                    float dist = Vector3.Distance(transform.position, tpar.position);
-                    tpar.Translate(new Vector3(0.0f, 0.0f, - dist + distance), Space.World);
-                }
 
-                // tpar.Translate(new Vector3(0.0f, 0.0f, -distance) , Space.World);
-                setRotationCenter(molPar.TransformPoint(bary));
+            Vector3 savedPos = tpar.position;
+            tpar.Translate(-worldBary, Space.World);
+            if (distance > 0.0f)
+            {
+                float dist = Vector3.Distance(transform.position, tpar.position);
+                tpar.Translate(new Vector3(0.0f, 0.0f, -dist + distance), Space.World);
             }
-            else {
-                tpar.Translate(-worldBary, Space.World);
 
+
+            if (UnityMolMain.inVR())
+            {
                 Transform head = VRTK.VRTK_DeviceFinder.HeadsetCamera();
-
-                if (head != null) {
-                    Vector3 targetPos = head.position + (head.forward * distance);
-                    tpar.Translate(targetPos, Space.World);
+                if (head != null)
+                {
+                    Vector3 headTarget = head.position + head.forward;
+                    tpar.Translate(headTarget, Space.World);
                 }
-                setRotationCenter(molPar.TransformPoint(bary));
+            }
+
+            Vector3 targetPos = tpar.position;
+            tpar.position = savedPos;
+
+            int steps = 200;
+            for (int i = 1; i < steps / 4; i++)
+            {
+                float tt = i / (float)steps;
+                tpar.position = Vector3.Lerp(tpar.position, targetPos, tt);
+                yield return 0;
+            }
+
+            setRotationCenter(molPar.TransformPoint(bary));
+            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+        }
+
+        public void emulateLookAtPOV(UnityMolSelection sel, Vector3 pov, Vector3 targetPos, bool lerp = false)
+        {
+            Transform tpar = UnityMolMain.getRepresentationParent().transform;
+            Transform molPar = getSelectionParent(tpar, sel);
+            Vector3 localTarget = molPar.InverseTransformPoint(targetPos);
+            Vector3 localPov = molPar.InverseTransformPoint(pov);
+
+            GameObject go1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go1.transform.position = targetPos;
+            go1.transform.localScale = Vector3.one * 0.1f;
+            go1.transform.parent = molPar;
+
+            GameObject go2 = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go2.transform.position = pov;
+            go2.transform.localScale = Vector3.one * 0.1f;
+            go2.transform.parent = molPar;
+
+
+            if (!UnityMolMain.inVR())
+            {
+                tpar.Translate(-targetPos, Space.World);
+                float dist = Vector3.Distance(transform.position, molPar.TransformPoint(localTarget));
+                float distPovTarget = Vector3.Distance(pov, targetPos);
+                tpar.Translate(new Vector3(0.0f, 0.0f, -dist + distPovTarget), Space.World);
+
+                Vector3 fromVec = transform.position - molPar.TransformPoint(localTarget);
+                Vector3 toVec = molPar.TransformPoint(localPov) - molPar.TransformPoint(localTarget);
+                Quaternion fromTo = Quaternion.FromToRotation(fromVec, toVec);
+                // tpar.rotation = tpar.rotation * fromTo;
+                float angle = 0.0f;
+                Vector3 axis = Vector3.zero;
+                fromTo.ToAngleAxis(out angle, out axis);
+
+                tpar.RotateAround(molPar.TransformPoint(localTarget), axis, angle);
+
+
+            }
+            else
+            {
+
+            }
+
+            setRotationCenter(molPar.TransformPoint(localTarget));
+            // Debug.Log("New current center = " + currentCenterPosition.ToString("F4"));
+            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+        }
+
+
+        public static Vector3 computeCenterOfGravitySel(UnityMolSelection sel)
+        {
+            Vector3 pos = Vector3.zero;
+            foreach (UnityMolAtom a in sel.atoms)
+            {
+                pos += a.position;
+            }
+            pos /= sel.atoms.Count;
+            return pos;
+        }
+        Transform getSelectionParent(Transform allParent, UnityMolSelection sel)
+        {
+            if (sel.structures.Count == 1)
+            {
+                return allParent.Find(sel.structures[0].ToSelectionName());
+            }
+            else if (sel.structures.Count > 1)
+            {
+                return allParent;
+            }
+            return null;
+        }
+
+
+        void Update()
+        {
+
+            if (loadedMolPar == null)
+            {
+                loadedMolPar = UnityMolMain.getRepresentationParent().transform;
+            }
+            GameObject curUIInput = EventSystem.current.currentSelectedGameObject;
+
+            if (rotateX)
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.right, speedX);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (rotateY)
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.up, speedY);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (rotateZ)
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.forward, speedZ);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (curUIInput == null && Input.GetButton("RotationXLeft"))
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.right, speedX);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (curUIInput == null && Input.GetButton("RotationXRight"))
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), -loadedMolPar.right, speedX);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (curUIInput == null && Input.GetButton("RotationYLeft"))
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.up, speedY);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (curUIInput == null && Input.GetButton("RotationYRight"))
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), -loadedMolPar.up, speedY);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (curUIInput == null && Input.GetButton("RotationZLeft"))
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.forward, speedZ);
+                }
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
+            if (curUIInput == null && Input.GetButton("RotationZRight"))
+            {
+                foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures)
+                {
+                    Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
+                    t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), -loadedMolPar.forward, speedZ);
+                }
                 UnityMolMain.getCustomRaycast().needsUpdatePos = true;
             }
 
-        }
-    }
-
-    public void centerOnSelectionLerp(UnityMolSelection sel, float distance) {
-        Transform tpar = UnityMolMain.getRepresentationParent().transform;
-        Vector3 bary = computeCenterOfGravitySel(sel);
-        Transform molPar = getSelectionParent(tpar, sel);
-        StartCoroutine(delayedCenterOnSelection(tpar, bary, molPar, distance));
-    }
-
-    IEnumerator delayedCenterOnSelection(Transform tpar, Vector3 bary, Transform molPar, float distance) {
-        //End of frame
-        yield return 0;
-
-        Vector3 worldBary = molPar.TransformPoint(bary);
-
-        Vector3 savedPos = tpar.position;
-        tpar.Translate(-worldBary, Space.World);
-        if (distance > 0.0f) {
-            float dist = Vector3.Distance(transform.position, tpar.position);
-            tpar.Translate(new Vector3(0.0f, 0.0f, - dist + distance), Space.World);
-        }
-
-
-        if (UnityMolMain.inVR()) {
-            Transform head = VRTK.VRTK_DeviceFinder.HeadsetCamera();
-            if (head != null) {
-                Vector3 headTarget = head.position + head.forward;
-                tpar.Translate(headTarget, Space.World);
+            if (curUIInput == null && Input.GetButton("ZoomIn"))
+            {
+                Vector3 pos = currentTransform.position;
+                float val = moveSpeed * 0.1f;
+                pos.z += val;
+                currentTransform.position = pos;
+                currentCenterPosition.z += val;
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
             }
-        }
-
-        Vector3 targetPos = tpar.position;
-        tpar.position = savedPos;
-
-        int steps = 200;
-        for (int i = 1; i < steps / 4; i++) {
-            float tt = i / (float)steps;
-            tpar.position = Vector3.Lerp(tpar.position, targetPos, tt);
-            yield return 0;
-        }
-
-        setRotationCenter(molPar.TransformPoint(bary));
-        UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-    }
-
-    public void emulateLookAtPOV(UnityMolSelection sel, Vector3 pov, Vector3 targetPos, bool lerp = false) {
-        Transform tpar = UnityMolMain.getRepresentationParent().transform;
-        Transform molPar = getSelectionParent(tpar, sel);
-        Vector3 localTarget = molPar.InverseTransformPoint(targetPos);
-        Vector3 localPov = molPar.InverseTransformPoint(pov);
-
-        GameObject go1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        go1.transform.position = targetPos;
-        go1.transform.localScale = Vector3.one * 0.1f;
-        go1.transform.parent = molPar;
-
-        GameObject go2 = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        go2.transform.position = pov;
-        go2.transform.localScale = Vector3.one * 0.1f;
-        go2.transform.parent = molPar;
-
-
-        if (!UnityMolMain.inVR()) {
-            tpar.Translate(-targetPos, Space.World);
-            float dist = Vector3.Distance(transform.position, molPar.TransformPoint(localTarget));
-            float distPovTarget = Vector3.Distance(pov, targetPos);
-            tpar.Translate(new Vector3(0.0f, 0.0f, - dist + distPovTarget), Space.World);
-
-            Vector3 fromVec = transform.position - molPar.TransformPoint(localTarget);
-            Vector3 toVec = molPar.TransformPoint(localPov) - molPar.TransformPoint(localTarget);
-            Quaternion fromTo = Quaternion.FromToRotation(fromVec, toVec);
-            // tpar.rotation = tpar.rotation * fromTo;
-            float angle = 0.0f;
-            Vector3 axis = Vector3.zero;
-            fromTo.ToAngleAxis(out angle, out axis);
-
-            tpar.RotateAround(molPar.TransformPoint(localTarget), axis, angle);
-
-
-        }
-        else {
-
-        }
-
-        setRotationCenter(molPar.TransformPoint(localTarget));
-        // Debug.Log("New current center = " + currentCenterPosition.ToString("F4"));
-        UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-    }
-
-
-    public static Vector3 computeCenterOfGravitySel(UnityMolSelection sel) {
-        Vector3 pos = Vector3.zero;
-        foreach (UnityMolAtom a in sel.atoms) {
-            pos += a.position;
-        }
-        pos /= sel.atoms.Count;
-        return pos;
-    }
-    Transform getSelectionParent(Transform allParent, UnityMolSelection sel) {
-        if (sel.structures.Count == 1) {
-            return allParent.Find(sel.structures[0].ToSelectionName());
-        }
-        else if (sel.structures.Count > 1) {
-            return allParent;
-        }
-        return null;
-    }
-
-
-    void Update ()
-    {
-
-        if (loadedMolPar == null) {
-            loadedMolPar = UnityMolMain.getRepresentationParent().transform;
-        }
-        GameObject curUIInput = EventSystem.current.currentSelectedGameObject;
-
-        if (rotateX) {
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.right, speedX);
+            if (curUIInput == null && Input.GetButton("ZoomOut"))
+            {
+                Vector3 pos = currentTransform.position;
+                float val = moveSpeed * 0.1f;
+                pos.z -= val;
+                currentTransform.position = pos;
+                currentCenterPosition.z -= val;
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
             }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if (rotateY) {
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.up, speedY);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if (rotateZ) {
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.forward, speedZ);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if(curUIInput == null && Input.GetButton("RotationXLeft")){
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.right, speedX);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if(curUIInput == null && Input.GetButton("RotationXRight")){
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), -loadedMolPar.right, speedX);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if(curUIInput == null && Input.GetButton("RotationYLeft")){
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.up, speedY);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if(curUIInput == null && Input.GetButton("RotationYRight")){
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), -loadedMolPar.up, speedY);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if(curUIInput == null && Input.GetButton("RotationZLeft")){
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), loadedMolPar.forward, speedZ);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if(curUIInput == null && Input.GetButton("RotationZRight")){
-            foreach (UnityMolStructure s in UnityMolMain.getStructureManager().loadedStructures) {
-                Transform t = UnityMolMain.getStructureManager().structureToGameObject[s.uniqueName].transform;
-                t.RotateAround(t.TransformPoint(s.currentModel.centerOfGravity), -loadedMolPar.forward, speedZ);
-            }
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
 
-        if(curUIInput == null && Input.GetButton("ZoomIn")){
-            Vector3 pos = currentTransform.position;
-            float val = moveSpeed * 0.1f;
-            pos.z += val;
-            currentTransform.position = pos;
-            currentCenterPosition.z += val;
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if(curUIInput == null && Input.GetButton("ZoomOut")){
-            Vector3 pos = currentTransform.position;
-            float val = moveSpeed * 0.1f;
-            pos.z -= val;
-            currentTransform.position = pos;
-            currentCenterPosition.z -= val;
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
+            if (disableMouseInVR && UnityMolMain.inVR())
+            {
+                return;
+            }
+            if (currentTransform == null)
+                setSelectedOject(UnityMolMain.getRepresentationParent().transform);
 
-        if (disableMouseInVR && UnityMolMain.inVR()) {
-            return;
-        }
-        if (currentTransform == null)
-            setSelectedOject(UnityMolMain.getRepresentationParent().transform);
+            if (currentTransform == null)
+                return;
 
-        if (currentTransform == null)
-            return;
+            moveOnlySelectedToggle.isOn = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (moveOnlySelectedToggle.isOn)
+            {
+                UnityMolSelectionManager selectionManager = UnityMolMain.getSelectionManager();
+                UnityMolSelection selection = selectionManager.getCurrentSelection();
+                foreach (UnityMolStructure structure in selection.structures)
+                {
+                    if (Input.GetMouseButton(0))
+                    {
+                        // Rotate
+                        Vector3 structCenter = computeCenterOfGravitySel(structure.ToSelection());
+                        Vector3 worldCenter = structure.atomToGo.Values.First().transform.parent.TransformPoint(structCenter);
+                        float upSpeed = -Input.GetAxis("Mouse X") * moveSpeed;
+                        float rightSpeed = Input.GetAxis("Mouse Y") * moveSpeed;
+                        foreach (UnityMolAtom atom in structure.currentModel.allAtoms)
+                        {
+                            GameObject atomGO = structure.atomToGo[atom];
 
-        if (Input.GetMouseButton(0) && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))) {
-            if (!UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) {
-                if (mouseSel == null || !mouseSel.duringIMD) {
-                    currentTransform.RotateAround(currentCenterPosition, Vector3.up, -Input.GetAxis("Mouse X")*moveSpeed);
-                    currentTransform.RotateAround(currentCenterPosition, Vector3.right, Input.GetAxis("Mouse Y")*moveSpeed);
+                            // Save the rotation
+                            Quaternion prevRotation = atomGO.transform.rotation;
+
+                            atomGO.transform.RotateAround(worldCenter, Vector3.up, upSpeed);
+                            atomGO.transform.RotateAround(worldCenter, Vector3.right, rightSpeed);
+                            atom.position = atomGO.transform.localPosition;
+                            atom.oriPosition = atomGO.transform.localPosition;
+
+                            // Restore the rotation so that zooming and translating are in the right direction
+                            atomGO.transform.rotation = prevRotation;
+                        }
+                        structure.updateRepresentations(trajectory: false);
+                    }
+                    if (Input.GetMouseButton(1))
+                    {
+                        // "Zoom" by moving object closer to/farther from camera
+                        float delta = -Input.GetAxis("Mouse Y") * moveSpeed * 0.5f;
+                        foreach (UnityMolAtom atom in structure.currentModel.allAtoms)
+                        {
+                            GameObject atomGO = structure.atomToGo[atom];
+                            Vector3 forward = atomGO.transform.InverseTransformDirection(Vector3.forward);
+                            atom.position += delta * forward;
+                            atom.oriPosition += delta * forward;
+                        }
+                        structure.updateRepresentations(trajectory: false);
+                    }
+                    if (Input.GetMouseButton(2))
+                    {
+                        // Translate
+                        Vector3 translateVector = 0.05f * Input.GetAxis("Mouse Y") * moveSpeed * Vector3.up + 0.05f * Input.GetAxis("Mouse X") * moveSpeed * Vector3.right;
+                        foreach (UnityMolAtom atom in structure.currentModel.allAtoms)
+                        {
+                            GameObject atomGO = structure.atomToGo[atom];
+                            Vector3 localVector = atomGO.transform.InverseTransformVector(translateVector);
+                            atom.position += localVector;
+                            atom.oriPosition += localVector;
+                        }
+                        structure.updateRepresentations(trajectory: false);
+                    }
+                }
+            }
+            else
+            {
+                if (Input.GetMouseButton(0))
+                {
+                    if (!UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                    {
+                        if (mouseSel == null || !mouseSel.duringIMD)
+                        {
+                            currentTransform.RotateAround(currentCenterPosition, Vector3.up, -Input.GetAxis("Mouse X") * moveSpeed);
+                            currentTransform.RotateAround(currentCenterPosition, Vector3.right, Input.GetAxis("Mouse Y") * moveSpeed);
+                            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                        }
+                    }
+                }
+                if (Input.GetMouseButton(1))
+                {
+                    Vector3 pos = currentTransform.position;
+                    float val = -Input.GetAxis("Mouse Y") * moveSpeed * 0.5f;
+                    pos.z += val;
+                    currentTransform.position = pos;
+                    currentCenterPosition.z += val;
+                    UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                }
+                if (Input.GetMouseButton(2))
+                {
+                    currentTransform.Translate(Vector3.up * Input.GetAxis("Mouse Y") * moveSpeed * 0.05f, Space.World);
+                    currentTransform.Translate(Vector3.right * Input.GetAxis("Mouse X") * moveSpeed * 0.05f, Space.World);
+                    currentCenterPosition.x += Input.GetAxis("Mouse X") * moveSpeed * 0.05f;
+                    currentCenterPosition.y += Input.GetAxis("Mouse Y") * moveSpeed * 0.05f;
                     UnityMolMain.getCustomRaycast().needsUpdatePos = true;
                 }
             }
-        }
-        if (Input.GetMouseButton(1) && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))) {
-            Vector3 pos = currentTransform.position;
-            float val = -Input.GetAxis("Mouse Y") * moveSpeed * 0.5f;
-            pos.z += val;
-            currentTransform.position = pos;
-            currentCenterPosition.z += val;
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
-        if (Input.GetMouseButton(2) && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))) {
-            currentTransform.Translate(Vector3.up * Input.GetAxis("Mouse Y")*moveSpeed * 0.05f, Space.World);
-            currentTransform.Translate(Vector3.right * Input.GetAxis("Mouse X")*moveSpeed * 0.05f, Space.World);
-            currentCenterPosition.x += Input.GetAxis("Mouse X") * moveSpeed * 0.05f;
-            currentCenterPosition.y += Input.GetAxis("Mouse Y") * moveSpeed * 0.05f;
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
 
-        float scroll = -Input.GetAxis("Mouse ScrollWheel") * scrollSpeed;
-        if (scroll != 0.0f && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) {
-            Vector3 pos = currentTransform.position;
-            pos.z += scroll * moveSpeed;
-            currentTransform.position = pos;
-            currentCenterPosition.z += scroll * moveSpeed;
-            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-        }
+            
 
-        if (Input.GetKeyDown(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.R)) {
-            resetPosition();
-            resetRotation();
-        }
+            float scroll = -Input.GetAxis("Mouse ScrollWheel") * scrollSpeed;
+            if (scroll != 0.0f && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                Vector3 pos = currentTransform.position;
+                pos.z += scroll * moveSpeed;
+                currentTransform.position = pos;
+                currentCenterPosition.z += scroll * moveSpeed;
+                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+            }
 
+            if (Input.GetKeyDown(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.R))
+            {
+                resetPosition();
+                resetRotation();
+            }
+
+        }
     }
-}
 }
