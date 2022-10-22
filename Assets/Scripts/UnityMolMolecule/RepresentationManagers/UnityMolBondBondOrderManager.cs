@@ -939,7 +939,15 @@ public class UnityMolBondBondOrderManager : UnityMolGenericRepresentationManager
         res.smoothness = shininess;
         // res.HSShrink = shrink;
 
-        res.shadow = (bondRep.meshesGO[0].GetComponent<Renderer>().shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.On);
+        if (bondRep.meshesGO.Count > 0)
+        {
+            res.shadow = (bondRep.meshesGO[0].GetComponent<Renderer>().shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.On);
+        }
+        else
+        {
+            res.shadow = false;
+        }
+        
         // res.HSScale = scaleBond;
 
 
