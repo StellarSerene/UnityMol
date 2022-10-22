@@ -2985,8 +2985,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa426bcca4f956042be28bfa0345eed4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  onText: Move only selected strutures
-  offText: Move only selected strutures
+  onText: (Hold Ctrl) Move only selected strutures
+  offText: (Hold Ctrl) Move only selected strutures
 --- !u!114 &166964605
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3046,7 +3046,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Move only selected strutures
+  m_Text: (Hold Ctrl) Move only selected strutures
 --- !u!222 &166964608
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -32837,7 +32837,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3db9b681d96c49f4f8a3e2a9ceb17f46, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animationDuration: 0.5
+  animationDuration: 0.1
   onColor: {r: 0, g: 0.4784314, b: 0.7568628, a: 1}
   offColor: {r: 0.16862746, g: 0.19607843, b: 0.24313726, a: 1}
   disabledColor: {r: 0, g: 0, b: 0, a: 0.2627451}
@@ -49027,6 +49027,7 @@ MonoBehaviour:
   rotateZ: 0
   currentCenterPosition: {x: 0, y: 0, z: 0}
   disableMouseInVR: 1
+  moveOnlySelectedToggle: {fileID: 1663517101}
 --- !u!114 &114307601140278835
 MonoBehaviour:
   m_ObjectHideFlags: 0

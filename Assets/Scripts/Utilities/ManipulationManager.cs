@@ -79,6 +79,8 @@ namespace UMol
 
         public bool disableMouseInVR = true;
 
+        public Toggle moveOnlySelectedToggle;
+
         private Transform loadedMolPar;
         private MouseOverSelection mouseSel;
 
@@ -476,35 +478,99 @@ namespace UMol
             if (currentTransform == null)
                 return;
 
-            if (Input.GetMouseButton(0) && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            moveOnlySelectedToggle.isOn = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (moveOnlySelectedToggle.isOn)
             {
-                if (!UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                UnityMolSelectionManager selectionManager = UnityMolMain.getSelectionManager();
+                UnityMolSelection selection = selectionManager.getCurrentSelection();
+                foreach (UnityMolStructure structure in selection.structures)
                 {
-                    if (mouseSel == null || !mouseSel.duringIMD)
+                    if (Input.GetMouseButton(0))
                     {
-                        currentTransform.RotateAround(currentCenterPosition, Vector3.up, -Input.GetAxis("Mouse X") * moveSpeed);
-                        currentTransform.RotateAround(currentCenterPosition, Vector3.right, Input.GetAxis("Mouse Y") * moveSpeed);
-                        UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                        // Rotate
+                        Vector3 structCenter = computeCenterOfGravitySel(structure.ToSelection());
+                        Vector3 worldCenter = structure.atomToGo.Values.First().transform.parent.TransformPoint(structCenter);
+                        float upSpeed = -Input.GetAxis("Mouse X") * moveSpeed;
+                        float rightSpeed = Input.GetAxis("Mouse Y") * moveSpeed;
+                        foreach (UnityMolAtom atom in structure.currentModel.allAtoms)
+                        {
+                            GameObject atomGO = structure.atomToGo[atom];
+
+                            // Save the rotation
+                            Quaternion prevRotation = atomGO.transform.rotation;
+
+                            atomGO.transform.RotateAround(worldCenter, Vector3.up, upSpeed);
+                            atomGO.transform.RotateAround(worldCenter, Vector3.right, rightSpeed);
+                            atom.position = atomGO.transform.localPosition;
+                            atom.oriPosition = atomGO.transform.localPosition;
+
+                            // Restore the rotation so that zooming and translating are in the right direction
+                            atomGO.transform.rotation = prevRotation;
+                        }
+                        structure.updateRepresentations(trajectory: false);
+                    }
+                    if (Input.GetMouseButton(1))
+                    {
+                        // "Zoom" by moving object closer to/farther from camera
+                        float delta = -Input.GetAxis("Mouse Y") * moveSpeed * 0.5f;
+                        foreach (UnityMolAtom atom in structure.currentModel.allAtoms)
+                        {
+                            GameObject atomGO = structure.atomToGo[atom];
+                            Vector3 forward = atomGO.transform.InverseTransformDirection(Vector3.forward);
+                            atom.position += delta * forward;
+                            atom.oriPosition += delta * forward;
+                        }
+                        structure.updateRepresentations(trajectory: false);
+                    }
+                    if (Input.GetMouseButton(2))
+                    {
+                        // Translate
+                        Vector3 translateVector = 0.05f * Input.GetAxis("Mouse Y") * moveSpeed * Vector3.up + 0.05f * Input.GetAxis("Mouse X") * moveSpeed * Vector3.right;
+                        foreach (UnityMolAtom atom in structure.currentModel.allAtoms)
+                        {
+                            GameObject atomGO = structure.atomToGo[atom];
+                            Vector3 localVector = atomGO.transform.InverseTransformVector(translateVector);
+                            atom.position += localVector;
+                            atom.oriPosition += localVector;
+                        }
+                        structure.updateRepresentations(trajectory: false);
                     }
                 }
             }
-            if (Input.GetMouseButton(1) && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            else
             {
-                Vector3 pos = currentTransform.position;
-                float val = -Input.GetAxis("Mouse Y") * moveSpeed * 0.5f;
-                pos.z += val;
-                currentTransform.position = pos;
-                currentCenterPosition.z += val;
-                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                if (Input.GetMouseButton(0))
+                {
+                    if (!UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                    {
+                        if (mouseSel == null || !mouseSel.duringIMD)
+                        {
+                            currentTransform.RotateAround(currentCenterPosition, Vector3.up, -Input.GetAxis("Mouse X") * moveSpeed);
+                            currentTransform.RotateAround(currentCenterPosition, Vector3.right, Input.GetAxis("Mouse Y") * moveSpeed);
+                            UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                        }
+                    }
+                }
+                if (Input.GetMouseButton(1))
+                {
+                    Vector3 pos = currentTransform.position;
+                    float val = -Input.GetAxis("Mouse Y") * moveSpeed * 0.5f;
+                    pos.z += val;
+                    currentTransform.position = pos;
+                    currentCenterPosition.z += val;
+                    UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                }
+                if (Input.GetMouseButton(2))
+                {
+                    currentTransform.Translate(Vector3.up * Input.GetAxis("Mouse Y") * moveSpeed * 0.05f, Space.World);
+                    currentTransform.Translate(Vector3.right * Input.GetAxis("Mouse X") * moveSpeed * 0.05f, Space.World);
+                    currentCenterPosition.x += Input.GetAxis("Mouse X") * moveSpeed * 0.05f;
+                    currentCenterPosition.y += Input.GetAxis("Mouse Y") * moveSpeed * 0.05f;
+                    UnityMolMain.getCustomRaycast().needsUpdatePos = true;
+                }
             }
-            if (Input.GetMouseButton(2) && !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
-            {
-                currentTransform.Translate(Vector3.up * Input.GetAxis("Mouse Y") * moveSpeed * 0.05f, Space.World);
-                currentTransform.Translate(Vector3.right * Input.GetAxis("Mouse X") * moveSpeed * 0.05f, Space.World);
-                currentCenterPosition.x += Input.GetAxis("Mouse X") * moveSpeed * 0.05f;
-                currentCenterPosition.y += Input.GetAxis("Mouse Y") * moveSpeed * 0.05f;
-                UnityMolMain.getCustomRaycast().needsUpdatePos = true;
-            }
+
+            
 
             float scroll = -Input.GetAxis("Mouse ScrollWheel") * scrollSpeed;
             if (scroll != 0.0f && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
